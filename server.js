@@ -23,7 +23,6 @@ async function initDb() {
   try {
     const client = await pool.connect();
     
-    // 1. Tabela korisnika
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -34,7 +33,6 @@ async function initDb() {
       );
     `);
 
-    // 2. Tabela predmeta
     await client.query(`
       CREATE TABLE IF NOT EXISTS predmeti (
         id SERIAL PRIMARY KEY,
@@ -60,7 +58,6 @@ async function initDb() {
       );
     `);
 
-    // Provera kolona
     const alterQueries = [
       'ALTER TABLE predmeti ADD COLUMN IF NOT EXISTS user_id INTEGER;',
       'ALTER TABLE predmeti ADD COLUMN IF NOT EXISTS vrsta_predmeta TEXT;',
@@ -95,7 +92,6 @@ async function initDb() {
 
 initDb();
 
-// Middleware za proveru JWT tokena
 function authMiddleware(req, res, next) {
   const token = req.headers['authorization'];
   if (!token) {
@@ -112,7 +108,6 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// RUTE ZA AUTENTIKACIJU
 app.post('/api/register', async (req, res) => {
   const { email, password, ime } = req.body;
   if (!email || !password) {
@@ -168,7 +163,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// RUTE ZA PREDMETE
 app.get('/api/predmeti', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
