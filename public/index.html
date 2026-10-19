@@ -108,4 +108,194 @@
             <option value="Na čekanju">Na čekanju</option>
           </select>
         </div>
-        <div class="
+        <div class="form-group">
+          <label>Potpisnik</label>
+          <input type="text" id="potpisnik" placeholder="Potpisnik">
+        </div>
+        <div class="form-group">
+          <label>Napomene</label>
+          <textarea id="napomena" rows="2" placeholder="Napomena..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <div class="file-inputs">
+            <div>
+              <label>📷 Us slikaj kamerom</label>
+              <input type="file" id="cameraFile" accept="image/*" capture="environment">
+            </div>
+            <div>
+              <label>📁 Priloži dokument / galeriju</label>
+              <input type="file" id="galleryFile" accept="image/*">
+            </div>
+          </div>
+          <input type="hidden" id="slika_base64">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-main">💾 Sačuvaj Predmet</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📁 Registar Predmeta</div>
+    <input type="text" id="search" class="search-input" placeholder="Pretraži registar..." onkeyup="filtriraj()">
+    <div id="listaPredmeta"></div>
+  </div>
+</div>
+
+<script>
+  let SVI_PREDMETI = [];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('datum_prijema').valueAsDate = new Date();
+    ucitajPredmete();
+  });
+
+  function obradiFajl(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        document.getElementById('slika_base64').value = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  document.getElementById('cameraFile').addEventListener('change', obradiFajl);
+  document.getElementById('galleryFile').addEventListener('change', obradiFajl);
+
+  async function ucitajPredmete() {
+    try {
+      const res = await fetch('/api/predmeti');
+      SVI_PREDMETI = await res.json();
+      prikaziKartice(SVI_PREDMETI);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function prikaziKartice(podaci) {
+    const kontekst = document.getElementById('listaPredmeta');
+    kontekst.innerHTML = '';
+
+    if (podaci.length === 0) {
+      kontekst.innerHTML = '<p style="color:#777; text-align:center;">Nema unetih predmeta.</p>';
+      return;
+    }
+
+    podaci.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      const statusClass = p.status === 'Završen' ? 'zavrsen' : 'u-radu';
+      
+      div.innerHTML = `
+        <div class="item-header">
+          <div class="item-title">${p.naziv_predmeta || 'Bez naziva'}</div>
+          <span class="badge ${statusClass}">${p.status || 'U radu'}</span>
+        </div>
+        <div class="item-details">
+          <b>Oznaka:</b> ${p.interni_broj || '-'}<br>
+          <b>Vrsta:</b> ${p.vrsta_predmeta || '-'}<br>
+          <b>Stranka:</b> ${p.investor || '-'}<br>
+          <b>Obrađivač:</b> ${p.obradivac || '-'}<br>
+          <b>Datum:</b> ${p.datum_prijema || '-'} | <b>Rok:</b> ${p.rok_datum || '-'}
+          ${p.napomena ? `<br><i>Napomena: ${p.napomena}</i>` : ''}
+        </div>
+        ${p.slika_base64 ? `<img src="${p.slika_base64}" class="item-thumb" onclick="window.open('${p.slika_base64}')">` : ''}
+        <div class="actions">
+          <button class="btn-action btn-edit" onclick="izmeni(${p.id})">Izmeni</button>
+          <a class="btn-action btn-mail" href="mailto:?subject=Predmet: ${encodeURIComponent(p.naziv_predmeta)}&body=Oznaka: ${encodeURIComponent(p.interni_broj)}">📧 Mail</a>
+          <button class="btn-action btn-delete" onclick="obrisi(${p.id})">🗑️ Obriši</button>
+        </div>
+      `;
+      kontekst.appendChild(div);
+    });
+  }
+
+  document.getElementById('predmetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      id: document.getElementById('predmetId').value || null,
+      vrsta_predmeta: document.getElementById('vrsta_predmeta').value,
+      interni_broj: document.getElementById('interni_broj').value,
+      naziv_predmeta: document.getElementById('naziv_predmeta').value,
+      investor: document.getElementById('investor').value,
+      obradivac: document.getElementById('obradivac').value,
+      potpisnik: document.getElementById('potpisnik').value,
+      datum_prijema: document.getElementById('datum_prijema').value,
+      rok_datum: document.getElementById('rok_datum').value,
+      status: document.getElementById('status').value,
+      slika_base64: document.getElementById('slika_base64').value,
+      napomena: document.getElementById('napomena').value
+    };
+
+    try {
+      const res = await fetch('/api/predmeti', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        resetForma();
+        ucitajPredmete();
+      }
+    } catch (err) {
+      alert('Greška pri čuvanju');
+    }
+  });
+
+  function izmeni(id) {
+    const p = SVI_PREDMETI.find(item => item.id === id);
+    if (!p) return;
+    document.getElementById('predmetId').value = p.id;
+    document.getElementById('vrsta_predmeta').value = p.vrsta_predmeta || 'Opšti predmet / Zadatak';
+    document.getElementById('interni_broj').value = p.interni_broj || '';
+    document.getElementById('naziv_predmeta').value = p.naziv_predmeta || '';
+    document.getElementById('investor').value = p.investor || '';
+    document.getElementById('obradivac').value = p.obradivac || '';
+    document.getElementById('potpisnik').value = p.potpisnik || '';
+    document.getElementById('datum_prijema').value = p.datum_prijema || '';
+    document.getElementById('rok_datum').value = p.rok_datum || '';
+    document.getElementById('status').value = p.status || 'U radu';
+    document.getElementById('slika_base64').value = p.slika_base64 || '';
+    document.getElementById('napomena').value = p.napomena || '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function obrisi(id) {
+    if (!confirm('Obriši ovaj predmet?')) return;
+    try {
+      const res = await fetch('/api/obrisi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) ucitajPredmete();
+    } catch (err) {
+      alert('Greška pri brisanju');
+    }
+  }
+
+  function resetForma() {
+    document.getElementById('predmetForm').reset();
+    document.getElementById('predmetId').value = '';
+    document.getElementById('slika_base64').value = '';
+    document.getElementById('datum_prijema').valueAsDate = new Date();
+  }
+
+  function filtriraj() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const filtrirano = SVI_PREDMETI.filter(p => 
+      (p.naziv_predmeta && p.naziv_predmeta.toLowerCase().includes(q)) ||
+      (p.investor && p.investor.toLowerCase().includes(q)) ||
+      (p.interni_broj && p.interni_broj.toLowerCase().includes(q)) ||
+      (p.obradivac && p.obradivac.toLowerCase().includes(q))
+    );
+    prikaziKartice(filtrirano);
+  }
+</script>
+</body>
+</html>
