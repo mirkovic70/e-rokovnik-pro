@@ -235,7 +235,7 @@ app.post('/api/obrisi', authMiddleware, async (req, res) => {
   }
 });
 
-app.use((req, res) => {
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
