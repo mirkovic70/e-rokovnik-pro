@@ -139,8 +139,8 @@ app.delete('/api/predmeti/:id', async (req, res) => {
   }
 });
 
-// Posluživanje frontend aplikacije
-app.get('*', (req, res) => {
+// Posluživanje frontend aplikacije (Ispravljena ruta)
+app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
