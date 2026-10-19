@@ -91,7 +91,7 @@ app.post('/api/predmeti', async (req, res) => {
           vrsta_predmeta, interni_broj, naziv_predmeta, investor, obradivac,
           potpisnik, datum_prijema, rok_datum, status, napomena, slika_base64,
           ceop_broj, rop_broj, opstina, katastarska_opstina, broj_parcele, nadlezni_organ
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING *;
       `;
       const values = [
