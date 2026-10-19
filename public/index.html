@@ -5,70 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Univerzalni Rokovnik Pro</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: #f4f6f9; color: #333; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { text-align: center; color: #2c3e50; margin-bottom: 20px; }
-    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-    .form-group { display: flex; flex-direction: column; }
-    .form-group label { font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #555; }
-    .form-group input, .form-group select, .form-group textarea { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
-    .full-width { grid-column: 1 / -1; }
-    .btn-container { display: flex; gap: 10px; margin-top: 15px; }
-    button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-    .btn-primary { background-color: #27ae60; color: white; }
-    .btn-primary:hover { background-color: #219150; }
-    .btn-danger { background-color: #e74c3c; color: white; }
-    .btn-danger:hover { background-color: #c0392b; }
-    .btn-secondary { background-color: #95a5a6; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background-color: #34495e; color: white; }
-    tr:hover { background-color: #f1f1f1; }
-    .search-box { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
-    .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f0f2f5; color: #1c1e21; padding: 12px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    
+    .header-bar { background: #184173; color: white; padding: 14px 18px; border-radius: 10px; font-size: 1.2rem; font-weight: bold; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; }
+    .tab-btn { flex: 1; min-width: 130px; padding: 10px; border: none; border-radius: 8px; background: #e4e6eb; font-weight: 600; color: #4b4f56; cursor: pointer; text-align: center; }
+    .tab-btn.active { background: #2374e1; color: white; }
+
+    .card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .card-title { font-size: 1.1rem; font-weight: bold; color: #184173; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.82rem; font-weight: bold; color: #4b4f56; }
+    input, select, textarea { padding: 9px 12px; border: 1px solid #ccd0d5; border-radius: 6px; font-size: 0.9rem; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: #2374e1; }
+
+    .file-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn-main { width: 100%; background: #2374e1; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 12px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .btn-main:hover { background: #1b64c6; }
+
+    .item-card { border-left: 5px solid #2374e1; background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 10px; position: relative; border-top: 1px solid #eee; border-right: 1px solid #eee; border-bottom: 1px solid #eee; }
+    .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .item-title { font-size: 1.05rem; font-weight: bold; color: #184173; }
+    .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; background: #e4e6eb; color: #4b4f56; }
+    .badge.u-radu { background: #e7f3ff; color: #1877f2; }
+    .badge.zavrsen { background: #e2f6ea; color: #2e7d32; }
+    
+    .item-details { font-size: 0.85rem; color: #606770; line-height: 1.4; margin-bottom: 8px; }
+    .item-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; margin-top: 6px; display: block; }
+
+    .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .btn-action { padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; color: white; text-align: center; text-decoration: none; display: inline-block; }
+    .btn-edit { background: #e67e22; }
+    .btn-mail { background: #8e44ad; }
+    .btn-delete { background: #e74c3c; }
+
+    .search-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 12px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Univerzalni Rokovnik Pro</h1>
+  <div class="header-bar">
+    📋 Univerzalni Rokovnik Pro
+  </div>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active">📁 Predmeti & Unos</button>
+    <button class="tab-btn" onclick="alert('Sekcija Rokovi stiže uskoro!')">📅 Rokovi & Kalendar</button>
+    <button class="tab-btn" onclick="alert('Sekcija Analitika stiže uskoro!')">📊 Analitika</button>
+  </div>
 
   <div class="card">
+    <div class="card-title">➕ Unos Novog Predmeta</div>
     <form id="predmetForm">
       <input type="hidden" id="predmetId">
       <div class="form-grid">
         <div class="form-group">
-          <label>Vrsta predmeta</label>
-          <input type="text" id="vrsta_predmeta" placeholder="Npr. Objedinjena procedura">
+          <label>Vrsta predmeta *</label>
+          <select id="vrsta_predmeta">
+            <option value="Opšti predmet / Zadatak">Opšti predmet / Zadatak</option>
+            <option value="Objedinjena procedura">Objedinjena procedura</option>
+            <option value="Urbanizam">Urbanizam</option>
+            <option value="Ozren">Ozren</option>
+          </select>
         </div>
         <div class="form-group">
-          <label>Interni broj</label>
-          <input type="text" id="interni_broj">
+          <label>Oznaka / Broj *</label>
+          <input type="text" id="interni_broj" placeholder="INT-2026-01">
+        </div>
+        <div class="form-group full">
+          <label>Naziv predmeta *</label>
+          <input type="text" id="naziv_predmeta" placeholder="Unesite naziv" required>
         </div>
         <div class="form-group">
-          <label>Naziv predmeta</label>
-          <input type="text" id="naziv_predmeta" required>
-        </div>
-        <div class="form-group">
-          <label>Investitor</label>
-          <input type="text" id="investor">
+          <label>Stranka / Investor</label>
+          <input type="text" id="investor" placeholder="Ime stranke">
         </div>
         <div class="form-group">
           <label>Obrađivač</label>
-          <input type="text" id="obradivac">
+          <input type="text" id="obradivac" placeholder="Obrađivač">
         </div>
         <div class="form-group">
-          <label>Potpisnik</label>
-          <input type="text" id="potpisnik">
-        </div>
-        <div class="form-group">
-          <label>Datum prijema</label>
+          <label>Datum otvaranja *</label>
           <input type="date" id="datum_prijema">
         </div>
         <div class="form-group">
-          <label>Rok datum</label>
+          <label>Krajnji rok</label>
           <input type="date" id="rok_datum">
         </div>
         <div class="form-group">
@@ -80,118 +109,109 @@
           </select>
         </div>
         <div class="form-group">
-          <label>CEOP broj</label>
-          <input type="text" id="ceop_broj">
+          <label>Potpisnik</label>
+          <input type="text" id="potpisnik" placeholder="Potpisnik">
         </div>
-        <div class="form-group">
-          <label>ROP broj</label>
-          <input type="text" id="rop_broj">
+        <div class="form-group full">
+          <label>Napomene</label>
+          <textarea id="napomena" rows="2" placeholder="Napomena..."></textarea>
         </div>
-        <div class="form-group">
-          <label>Opština</label>
-          <input type="text" id="opstina">
-        </div>
-        <div class="form-group">
-          <label>Katastarska opština</label>
-          <input type="text" id="katastarska_opstina">
-        </div>
-        <div class="form-group">
-          <label>Broj parcele</label>
-          <input type="text" id="broj_parcele">
-        </div>
-        <div class="form-group">
-          <label>Nadležni organ</label>
-          <input type="text" id="nadlezni_organ">
-        </div>
-        <div class="form-group">
-          <label>Slika/Dokument (Base64)</label>
-          <input type="file" id="slikaFile" accept="image/*">
+        
+        <div class="form-group full">
+          <div class="file-inputs">
+            <div>
+              <label>📷 Us slikaj kamerom</label>
+              <input type="file" id="cameraFile" accept="image/*" capture="environment">
+            </div>
+            <div>
+              <label>📁 Priloži dokument / galeriju</label>
+              <input type="file" id="galleryFile" accept="image/*">
+            </div>
+          </div>
           <input type="hidden" id="slika_base64">
-        </div>
-        <div class="form-group full-width">
-          <label>Napomena</label>
-          <textarea id="napomena" rows="2"></textarea>
         </div>
       </div>
 
-      <div class="btn-container">
-        <button type="submit" class="btn-primary">Sačuvaj predmet</button>
-        <button type="button" class="btn-secondary" onclick="resetForma()">Očisti formu</button>
-      </div>
+      <button type="submit" class="btn-main">💾 Sačuvaj Predmet</button>
     </form>
   </div>
 
   <div class="card">
-    <input type="text" id="search" class="search-box" placeholder="Pretraži predmete..." onkeyup="filtriraj()">
-    <div style="overflow-x: auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Interni br.</th>
-            <th>Naziv</th>
-            <th>Investitor</th>
-            <th>Obrađivač</th>
-            <th>Rok</th>
-            <th>Status</th>
-            <th>Akcije</th>
-          </tr>
-        </thead>
-        <tbody id="tabelaTelo"></tbody>
-      </table>
-    </div>
+    <div class="card-title">📁 Registar Predmeta</div>
+    <input type="text" id="search" class="search-input" placeholder="Pretraži registar..." onkeyup="filtriraj()">
+    <div id="listaPredmeta"></div>
   </div>
 </div>
 
 <script>
   let SVI_PREDMETI = [];
 
-  document.addEventListener('DOMContentLoaded', ucitajPredmete);
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('datum_prijema').valueAsDate = new Date();
+    ucitajPredmete();
+  });
 
-  document.getElementById('slikaFile').addEventListener('change', function(e) {
+  function obradiFajl(e) {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = function(evt) {
+      reader.onload = (evt) => {
         document.getElementById('slika_base64').value = evt.target.result;
       };
       reader.readAsDataURL(file);
     }
-  });
+  }
+
+  document.getElementById('cameraFile').addEventListener('change', obradiFajl);
+  document.getElementById('galleryFile').addEventListener('change', obradiFajl);
 
   async function ucitajPredmete() {
     try {
       const res = await fetch('/api/predmeti');
       SVI_PREDMETI = await res.json();
-      prikaziTabelu(SVI_PREDMETI);
+      prikaziKartice(SVI_PREDMETI);
     } catch (err) {
-      console.error('Greška pri učitavanju:', err);
+      console.error(err);
     }
   }
 
-  function prikaziTabelu(podaci) {
-    const tbody = document.getElementById('tabelaTelo');
-    tbody.innerHTML = '';
+  function prikaziKartice(podaci) {
+    const kontekst = document.getElementById('listaPredmeta');
+    kontekst.innerHTML = '';
+
+    if (podaci.length === 0) {
+      kontekst.innerHTML = '<p style="color:#777; text-align:center;">Nema unetih predmeta.</p>';
+      return;
+    }
+
     podaci.forEach(p => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${p.id}</td>
-        <td>${p.interni_broj || ''}</td>
-        <td><b>${p.naziv_predmeta || ''}</b></td>
-        <td>${p.investor || ''}</td>
-        <td>${p.obradivac || ''}</td>
-        <td>${p.rok_datum || ''}</td>
-        <td>${p.status || ''}</td>
-        <td>
-          <button class="btn-secondary" style="padding:4px 8px;" onclick="izmeni(${p.id})">Izmeni</button>
-          <button class="btn-danger" style="padding:4px 8px;" onclick="obrisi(${p.id})">Obriši</button>
-        </td>
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      const statusClass = p.status === 'Završen' ? 'zavrsen' : 'u-radu';
+      
+      div.innerHTML = `
+        <div class="item-header">
+          <div class="item-title">${p.naziv_predmeta || 'Bez naziva'}</div>
+          <span class="badge ${statusClass}">${p.status || 'U radu'}</span>
+        </div>
+        <div class="item-details">
+          <b>Oznaka:</b> ${p.interni_broj || '-'} | <b>Vrsta:</b> ${p.vrsta_predmeta || '-'}<br>
+          <b>Stranka:</b> ${p.investor || '-'} | <b>Obrađivač:</b> ${p.obradivac || '-'}<br>
+          <b>Datum:</b> ${p.datum_prijema || '-'} | <b>Rok:</b> ${p.rok_datum || '-'}
+          ${p.napomena ? `<br><i>Napomena: ${p.napomena}</i>` : ''}
+        </div>
+        ${p.slika_base64 ? `<img src="${p.slika_base64}" class="item-thumb" onclick="window.open('${p.slika_base64}')">` : ''}
+        <div class="actions">
+          <button class="btn-action btn-edit" onclick="izmeni(${p.id})">Izmeni</button>
+          <a class="btn-action btn-mail" href="mailto:?subject=Predmet: ${encodeURIComponent(p.naziv_predmeta)}&body=Oznaka: ${encodeURIComponent(p.interni_broj)}">📧 E-mail</a>
+          <button class="btn-action btn-delete" onclick="obrisi(${p.id})">🗑️ Obriši</button>
+        </div>
       `;
-      tbody.appendChild(tr);
+      kontekst.appendChild(div);
     });
   }
 
-  document.getElementById('predmetForm').addEventListener('submit', async function(e) {
+  document.getElementById('predmetForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {
       id: document.getElementById('predmetId').value || null,
@@ -204,12 +224,6 @@
       datum_prijema: document.getElementById('datum_prijema').value,
       rok_datum: document.getElementById('rok_datum').value,
       status: document.getElementById('status').value,
-      ceop_broj: document.getElementById('ceop_broj').value,
-      rop_broj: document.getElementById('rop_broj').value,
-      opstina: document.getElementById('opstina').value,
-      katastarska_opstina: document.getElementById('katastarska_opstina').value,
-      broj_parcele: document.getElementById('broj_parcele').value,
-      nadlezni_organ: document.getElementById('nadlezni_organ').value,
       slika_base64: document.getElementById('slika_base64').value,
       napomena: document.getElementById('napomena').value
     };
@@ -234,7 +248,7 @@
     const p = SVI_PREDMETI.find(item => item.id === id);
     if (!p) return;
     document.getElementById('predmetId').value = p.id;
-    document.getElementById('vrsta_predmeta').value = p.vrsta_predmeta || '';
+    document.getElementById('vrsta_predmeta').value = p.vrsta_predmeta || 'Opšti predmet / Zadatak';
     document.getElementById('interni_broj').value = p.interni_broj || '';
     document.getElementById('naziv_predmeta').value = p.naziv_predmeta || '';
     document.getElementById('investor').value = p.investor || '';
@@ -243,18 +257,13 @@
     document.getElementById('datum_prijema').value = p.datum_prijema || '';
     document.getElementById('rok_datum').value = p.rok_datum || '';
     document.getElementById('status').value = p.status || 'U radu';
-    document.getElementById('ceop_broj').value = p.ceop_broj || '';
-    document.getElementById('rop_broj').value = p.rop_broj || '';
-    document.getElementById('opstina').value = p.opstina || '';
-    document.getElementById('katastarska_opstina').value = p.katastarska_opstina || '';
-    document.getElementById('broj_parcele').value = p.broj_parcele || '';
-    document.getElementById('nadlezni_organ').value = p.nadlezni_organ || '';
     document.getElementById('slika_base64').value = p.slika_base64 || '';
     document.getElementById('napomena').value = p.napomena || '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function obrisi(id) {
-    if (!confirm('Da li ste sigurni da želite da obrišete ovaj predmet?')) return;
+    if (!confirm('Obriši ovaj predmet?')) return;
     try {
       const res = await fetch('/api/obrisi', {
         method: 'POST',
@@ -272,6 +281,7 @@
     document.getElementById('predmetForm').reset();
     document.getElementById('predmetId').value = '';
     document.getElementById('slika_base64').value = '';
+    document.getElementById('datum_prijema').valueAsDate = new Date();
   }
 
   function filtriraj() {
@@ -279,9 +289,10 @@
     const filtrirano = SVI_PREDMETI.filter(p => 
       (p.naziv_predmeta && p.naziv_predmeta.toLowerCase().includes(q)) ||
       (p.investor && p.investor.toLowerCase().includes(q)) ||
-      (p.interni_broj && p.interni_broj.toLowerCase().includes(q))
+      (p.interni_broj && p.interni_broj.toLowerCase().includes(q)) ||
+      (p.obradivac && p.obradivac.toLowerCase().includes(q))
     );
-    prikaziTabelu(filtrirano);
+    prikaziKartice(filtrirano);
   }
 </script>
 </body>
