@@ -87,7 +87,7 @@ async function initDb() {
     }
 
     client.release();
-    console.log('✅ PostgreSQL baza je sinhronizovana sa korisničkim sistemom!');
+    console.log('✅ PostgreSQL baza je sinhronizovana!');
   } catch (err) {
     console.error('❌ Greška sa bazom:', err);
   }
@@ -95,11 +95,11 @@ async function initDb() {
 
 initDb();
 
-// Middleware za proveru autorizacije (JWT Token)
+// Middleware za proveru JWT tokena
 function authMiddleware(req, res, next) {
   const token = req.headers['authorization'];
   if (!token) {
-    return res.status(401).json({ success: false, error: 'Niste prijavljeni (nedostaje token).' });
+    return res.status(401).json({ success: false, error: 'Niste prijavljeni.' });
   }
 
   try {
@@ -108,13 +108,11 @@ function authMiddleware(req, res, next) {
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(403).json({ success: false, error: 'Sesija je istekla. Prijavite se ponovo.' });
+    return res.status(403).json({ success: false, error: 'Sesija je istekla.' });
   }
 }
 
-// --- AUTENTIKACIJA RUTE ---
-
-// Registracija
+// RUTE ZA AUTENTIKACIJU
 app.post('/api/register', async (req, res) => {
   const { email, password, ime } = req.body;
   if (!email || !password) {
@@ -140,7 +138,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Prijava (Login)
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -171,9 +168,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// --- RUTE ZA PREDMETE (ZAŠTIĆENE SVOJIM USER_ID) ---
-
-// 1. Dohvatanje samo svojih predmeta
+// RUTE ZA PREDMETE
 app.get('/api/predmeti', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -186,14 +181,12 @@ app.get('/api/predmeti', authMiddleware, async (req, res) => {
   }
 });
 
-// 2. Unos ili izmena predmeta
 app.post('/api/predmeti', authMiddleware, async (req, res) => {
   const b = req.body;
   const userId = req.user.userId;
 
   try {
     if (b.id) {
-      // Izmena predmeta
       const queryText = `
         UPDATE predmeti SET
           vrsta_predmeta=$1, interni_broj=$2, naziv_predmeta=$3, investor=$4,
@@ -213,7 +206,6 @@ app.post('/api/predmeti', authMiddleware, async (req, res) => {
       const result = await pool.query(queryText, values);
       return res.json({ success: true, item: result.rows[0] });
     } else {
-      // Unos novog predmeta sa dodeljenim user_id
       const queryText = `
         INSERT INTO predmeti (
           user_id, vrsta_predmeta, interni_broj, naziv_predmeta, investor, obradivac,
@@ -239,7 +231,6 @@ app.post('/api/predmeti', authMiddleware, async (req, res) => {
   }
 });
 
-// 3. Brisanje samo svog predmeta
 app.post('/api/obrisi', authMiddleware, async (req, res) => {
   const { id } = req.body;
   try {
