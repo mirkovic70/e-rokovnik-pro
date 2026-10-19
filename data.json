@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1792355748135,
+    "vrsta_predmeta": "Opšti predmet / Zadatak",
+    "interni_broj": "56",
+    "naziv_predmeta": "golman",
+    "investor": "",
+    "obradjivac": "",
+    "potpisnik": "hgdsa",
+    "datum_prijema": "2026-10-18",
+    "rok_datum": "2026-10-31",
+    "status": "U radu",
+    "napomena": "",
+    "slika_base64": ""
+  },
+  {
+    "id": 1792355910995,
+    "vrsta_predmeta": "Opšti predmet / Zadatak",
+    "interni_broj": "int0001",
+    "naziv_predmeta": "Proba",
+    "investor": "Mirkovic",
+    "obradjivac": "Snežana",
+    "potpisnik": "Stefan Mirkovic",
+    "datum_prijema": "2026-10-18",
+    "rok_datum": "2026-10-30",
+    "status": "U radu",
+    "napomena": "rad je stvorio čoveka",
+    "slika_base64": ""
+  },
+  {
+    "id": 1792356177881,
+    "vrsta_predmeta": "CEOP i Građevinski postupak",
+    "interni_broj": "int 2026 01",
+    "naziv_predmeta": "Građevinska ",
+    "investor": "Vlada I",
+    "obradjivac": "Snežana",
+    "potpisnik": "Stefan Mirkovic",
+    "datum_prijema": "2026-10-18",
+    "rok_datum": "2026-10-30",
+    "status": "U radu",
+    "napomena": "yamo daleko",
+    "slika_base64": ""
+  }
+]

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Univerzalni Rokovnik Pro</title>
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a365d'/><text x='50%' y='65%' font-size='60' text-anchor='middle'>📋</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a365d'/><text x='50%' y='65%' font-size='60' text-anchor='middle'>📋</text></svg>">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a365d">
+
+  <style>
+    :root {
+      --primary: #1a365d;
+      --accent: #2b6cb0;
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --text: #1a202c;
+      --danger: #e53e3e;
+      --warn: #dd6b20;
+      --purple: #805ad5;
+    }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; }
+    header { background: var(--primary); color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+    
+    .nav-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .tab-btn { background: #e2e8f0; color: #4a5568; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 13px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .tab-btn.active { background: var(--accent); color: white; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .card { background: var(--card); padding: 16px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h2 { font-size: 1rem; margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+    label { font-size: 12px; font-weight: bold; color: #4a5568; display: block; margin-top: 8px; }
+    input, select, textarea, button { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-top: 4px; }
+    button { background: var(--accent); color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 6px; }
+    .btn-save { background: #2b6cb0; font-size: 16px; padding: 12px; margin-top: 12px; }
+    .btn-edit { background: var(--warn); color: white; }
+    .btn-mail { background: var(--purple); color: white; }
+    .btn-delete { background: var(--danger); color: white; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .ceop-box { background: #ebf8ff; border: 1px solid #bee3f8; padding: 10px; border-radius: 6px; margin-top: 8px; }
+    .item-card { background: white; border-left: 5px solid var(--accent); padding: 12px; border-radius: 6px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .item-title { font-size: 1rem; font-weight: bold; color: var(--primary); }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #e2e8f0; color: #4a5568; }
+    .item-details { font-size: 12px; color: #4a5568; line-height: 1.4; margin-bottom: 10px; }
+    .action-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .preview-img { max-width: 100%; height: auto; max-height: 140px; border-radius: 6px; margin-top: 6px; border: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>📋 Univerzalni Rokovnik Pro</span>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-predmeti', this)">📁 Predmeti & Unos</button>
+    <button class="tab-btn" onclick="switchTab('tab-rokovi', this)">📅 Rokovi & Kalendar</button>
+    <button class="tab-btn" onclick="switchTab('tab-analitika', this)">📊 Analitika</button>
+    <button class="tab-btn" onclick="switchTab('tab-izvoz', this)">📄 Izvoz / Mail</button>
+  </div>
+
+  <div id="tab-predmeti" class="tab-content active">
+    <div class="card">
+      <h2>➕ Unos Novog Predmeta</h2>
+      <form id="predmet-form">
+        <input type="hidden" id="p-id">
+        
+        <div class="grid-2">
+          <div>
+            <label>Vrsta predmeta *</label>
+            <select id="p-vrsta" onchange="toggleCEOP()">
+              <option value="Opšti predmet / Zadatak">Opšti predmet / Zadatak</option>
+              <option value="CEOP i Građevinski postupak">CEOP i Građevinski postupak</option>
+              <option value="Upravni postupak">Upravni postupak</option>
+              <option value="Pravni postupak">Pravni postupak</option>
+              <option value="Parcelacija">Parcelacija</option>
+              <option value="Građevinski projekat">Građevinski projekat</option>
+              <option value="Izvođenje radova">Izvođenje radova</option>
+              <option value="RGZ">RGZ</option>
+              <option value="Sudski postupak">Sudski postupak</option>
+            </select>
+          </div>
+          <div>
+            <label>Oznaka / Broj *</label>
+            <input type="text" id="p-interni" placeholder="INT-2026-01" required>
+          </div>
+        </div>
+
+        <label>Naziv predmeta *</label>
+        <input type="text" id="p-naziv" placeholder="Unesite naziv" required>
+
+        <div class="grid-2">
+          <div>
+            <label>Stranka / Investitor</label>
+            <input type="text" id="p-investor" placeholder="Ime stranke">
+          </div>
+          <div>
+            <label>Obrađivač</label>
+            <input type="text" id="p-obradjivac" placeholder="Obrađivač">
+          </div>
+        </div>
+
+        <div id="ceop-module" class="ceop-box" style="display: none;">
+          <div style="font-weight: bold; color: #2b6cb0; margin-bottom: 6px; font-size: 13px;">🏛️ CEOP Modul - Građevinske Dozvole</div>
+          <div class="grid-2">
+            <div>
+              <label>CEOP Broj</label>
+              <input type="text" id="p-ceop" placeholder="ROP-OPSTINA-...">
+            </div>
+            <div>
+              <label>ROP Broj</label>
+              <input type="text" id="p-rop" placeholder="ROP br.">
+            </div>
+          </div>
+          <div class="grid-3">
+            <div>
+              <label>Opština</label>
+              <input type="text" id="p-opstina">
+            </div>
+            <div>
+              <label>Katastarska opština</label>
+              <input type="text" id="p-ko">
+            </div>
+            <div>
+              <label>Broj parcele</label>
+              <input type="text" id="p-parcela">
+            </div>
+          </div>
+          <label>Nadležni organ</label>
+          <input type="text" id="p-organ">
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label>Datum otvaranja *</label>
+            <input type="date" id="p-datum" required>
+          </div>
+          <div>
+            <label>Krajnji rok</label>
+            <input type="date" id="p-rok">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label>Status</label>
+            <select id="p-status">
+              <option value="U radu">U radu</option>
+              <option value="Usaglašavanje">Usaglašavanje</option>
+              <option value="Dopuna">Dopuna</option>
+              <option value="Pravosnažnost">Pravosnažnost</option>
+              <option value="Završeno">Završeno</option>
+              <option value="Na čekanju">Na čekanju</option>
+            </select>
+          </div>
+          <div>
+            <label>Potpisnik</label>
+            <input type="text" id="p-potpisnik" placeholder="Potpisnik">
+          </div>
+        </div>
+
+        <label>Napomene</label>
+        <textarea id="p-napomena" rows="2" placeholder="Napomena..."></textarea>
+
+        <div class="grid-2">
+          <div>
+            <label>📷 Us slikaj kamerom</label>
+            <input type="file" id="p-kamera" accept="image/*" capture="environment" onchange="handleFile(this)">
+          </div>
+          <div>
+            <label>📁 Priloži dokument / galeriju</label>
+            <input type="file" id="p-prilog" onchange="handleFile(this)">
+          </div>
+        </div>
+
+        <input type="hidden" id="p-slika-base64">
+        <div id="img-preview-container"></div>
+
+        <button type="submit" class="btn-save">💾 Sačuvaj Predmet</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>📁 Registar Predmeta</h2>
+      <div id="items-list">
+        <div style="text-align: center; color: #718096; padding: 10px;">Učitavanje...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-rokovi" class="tab-content">
+    <div class="card">
+      <h2>📅 Pregled Rokova</h2>
+      <div id="rokovi-list" style="font-size: 13px; color: #4a5568;">Učitavanje rokovnika...</div>
+    </div>
+  </div>
+
+  <div id="tab-analitika" class="tab-content">
+    <div class="card">
+      <h2>📊 Statistička Analitika</h2>
+      <div id="analitika-box" style="font-size: 13px; color: #4a5568;">Učitavanje statistike...</div>
+    </div>
+  </div>
+
+  <div id="tab-izvoz" class="tab-content">
+    <div class="card">
+      <h2>📄 Izvoz i Slanje Izveštaja</h2>
+      <p style="font-size: 13px; color: #4a5568;">Slanje izveštaja i podataka predmeta direktno putem vaše e-mail aplikacije.</p>
+    </div>
+  </div>
+
+  <script>
+    let currentImageBase64 = "";
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('p-datum').valueAsDate = new Date();
+      loadPredmeti();
+    });
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function toggleCEOP() {
+      const vrsta = document.getElementById('p-vrsta').value;
+      const ceopMod = document.getElementById('ceop-module');
+      ceopMod.style.display = (vrsta === 'CEOP i Građevinski postupak') ? 'block' : 'none';
+    }
+
+    function handleFile(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentImageBase64 = e.target.result;
+          document.getElementById('p-slika-base64').value = currentImageBase64;
+          document.getElementById('img-preview-container').innerHTML = '<img src="' + currentImageBase64 + '" class="preview-img">';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    async function loadPredmeti() {
+      const container = document.getElementById('items-list');
+      try {
+        const res = await fetch('/api/predmeti');
+        const data = await res.json();
+        
+        if (!Array.isArray(data) || data.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: #718096; padding: 10px;">Nema unesenih predmeta u bazi.</div>';
+          return;
+        }
+
+        renderRokoviAndAnalitika(data);
+
+        container.innerHTML = data.map(item => {
+          let ceopHtml = item.ceop_broj ? '<br><strong>CEOP:</strong> ' + escapeHtml(item.ceop_broj) : '';
+          let napomenaHtml = item.napomena ? '<br><strong>Napomena:</strong> ' + escapeHtml(item.napomena) : '';
+          let slikaHtml = item.slika_base64 ? '<br><img src="' + item.slika_base64 + '" class="preview-img">' : '';
+
+          return '<div class="item-card">' +
+            '<div class="item-header">' +
+              '<span class="item-title">' + escapeHtml(item.naziv_predmeta || 'Bez naziva') + '</span>' +
+              '<span class="badge">' + escapeHtml(item.status || 'U radu') + '</span>' +
+            '</div>' +
+            '<div class="item-details">' +
+              '<strong>Oznaka:</strong> ' + escapeHtml(item.interni_broj || '/') + ' | <strong>Vrsta:</strong> ' + escapeHtml(item.vrsta_predmeta || '/') + '<br>' +
+              '<strong>Stranka:</strong> ' + escapeHtml(item.investor || '/') + ' | <strong>Obrađivač:</strong> ' + escapeHtml(item.obradjivac || '/') + '<br>' +
+              '<strong>Datum:</strong> ' + escapeHtml(item.datum_prijema || '/') + ' | <strong>Rok:</strong> ' + escapeHtml(item.rok_datum || '/') +
+              ceopHtml + napomenaHtml + slikaHtml +
+            '</div>' +
+            '<div class="action-btn-group">' +
+              '<button class="btn-edit" onclick="editPredmet(' + item.id + ')"> Izmeni</button>' +
+              '<button class="btn-mail" onclick="sendMailNative(' + item.id + ')">✉️ E-mail</button>' +
+              '<button class="btn-delete" onclick="deletePredmet(' + item.id + ')">🗑️ Obriši</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch (err) {
+        container.innerHTML = '<div style="color: var(--danger); text-align: center;">Greška pri učitavanju: ' + err.message + '</div>';
+      }
+    }
+
+    function renderRokoviAndAnalitika(data) {
+      const rokoviBox = document.getElementById('rokovi-list');
+      const saRokom = data.filter(d => d.rok_datum);
+      if (saRokom.length === 0) {
+        rokoviBox.innerHTML = 'Nema predmeta sa definisanim rokom.';
+      } else {
+        rokoviBox.innerHTML = saRokom.map(d => '📌 <strong>' + escapeHtml(d.naziv_predmeta) + '</strong> — Rok: <strong>' + d.rok_datum + '</strong> (' + d.status + ')').join('<br><hr style="border:0; border-top:1px solid #eee;">');
+      }
+
+      const total = data.length;
+      const uRadu = data.filter(d => d.status === 'U radu').length;
+      const zavrseno = data.filter(d => d.status === 'Završeno').length;
+      document.getElementById('analitika-box').innerHTML = 
+        '<strong>Ukupno predmeta:</strong> ' + total + '<br>' +
+        '<strong>U radu:</strong> ' + uRadu + '<br>' +
+        '<strong>Završeno:</strong> ' + zavrseno;
+    }
+
+    document.getElementById('predmet-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const payload = {
+        id: document.getElementById('p-id').value || null,
+        vrsta_predmeta: document.getElementById('p-vrsta').value,
+        interni_broj: document.getElementById('p-interni').value,
+        naziv_predmeta: document.getElementById('p-naziv').value,
+        investor: document.getElementById('p-investor').value,
+        obradjivac: document.getElementById('p-obradjivac').value,
+        potpisnik: document.getElementById('p-potpisnik').value,
+        datum_prijema: document.getElementById('p-datum').value,
+        rok_datum: document.getElementById('p-rok').value,
+        status: document.getElementById('p-status').value,
+        napomena: document.getElementById('p-napomena').value,
+        slika_base64: document.getElementById('p-slika-base64').value,
+        ceop_broj: document.getElementById('p-ceop').value,
+        rop_broj: document.getElementById('p-rop').value,
+        opstina: document.getElementById('p-opstina').value,
+        katastarska_opstina: document.getElementById('p-ko').value,
+        broj_parcele: document.getElementById('p-parcela').value,
+        nadlezni_organ: document.getElementById('p-organ').value
+      };
+
+      try {
+        const res = await fetch('/api/predmeti', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+          alert('✅ Predmet uspešno sačuvan u PostgreSQL!');
+          resetForm();
+          loadPredmeti();
+        } else {
+          alert('❌ Greška: ' + (result.error || 'Neuspešno čuvanje.'));
+        }
+      } catch (err) {
+        alert('❌ Došlo je do greške: ' + err.message);
+      }
+    });
+
+    async function editPredmet(id) {
+      try {
+        const res = await fetch('/api/predmeti');
+        const data = await res.json();
+        const item = data.find(p => String(p.id) === String(id));
+        if (!item) return;
+
+        document.getElementById('p-id').value = item.id;
+        document.getElementById('p-vrsta').value = item.vrsta_predmeta || 'Opšti predmet / Zadatak';
+        document.getElementById('p-interni').value = item.interni_broj || '';
+        document.getElementById('p-naziv').value = item.naziv_predmeta || '';
+        document.getElementById('p-investor').value = item.investor || '';
+        document.getElementById('p-obradjivac').value = item.obradjivac || '';
+        document.getElementById('p-potpisnik').value = item.potpisnik || '';
+        document.getElementById('p-datum').value = item.datum_prijema || '';
+        document.getElementById('p-rok').value = item.rok_datum || '';
+        document.getElementById('p-status').value = item.status || 'U radu';
+        document.getElementById('p-napomena').value = item.napomena || '';
+        document.getElementById('p-ceop').value = item.ceop_broj || '';
+        document.getElementById('p-rop').value = item.rop_broj || '';
+        document.getElementById('p-opstina').value = item.opstina || '';
+        document.getElementById('p-ko').value = item.katastarska_opstina || '';
+        document.getElementById('p-parcela').value = item.broj_parcele || '';
+        document.getElementById('p-organ').value = item.nadlezni_organ || '';
+        document.getElementById('p-slika-base64').value = item.slika_base64 || '';
+
+        if (item.slika_base64) {
+          document.getElementById('img-preview-container').innerHTML = '<img src="' + item.slika_base64 + '" class="preview-img">';
+        } else {
+          document.getElementById('img-preview-container').innerHTML = '';
+        }
+
+        toggleCEOP();
+        switchTab('tab-predmeti', document.querySelectorAll('.tab-btn')[0]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        alert('Greška pri učitavanju za izmenu: ' + err.message);
+      }
+    }
+
+    async function deletePredmet(id) {
+      if (!confirm('Da li ste sigurni da želite da obrišete ovaj predmet iz baze?')) return;
+      try {
+        const res = await fetch('/api/obrisi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id })
+        });
+        const result = await res.json();
+        if (result.success) {
+          loadPredmeti();
+        } else {
+          alert('Greška pri brisanju: ' + result.error);
+        }
+      } catch (err) {
+        alert('Greška pri brisanju: ' + err.message);
+      }
+    }
+
+    async function sendMailNative(id) {
+      const email = prompt('Unesite e-mail adresu primaoca:');
+      if (!email) return;
+
+      try {
+        const res = await fetch('/api/predmeti');
+        const data = await res.json();
+        const item = data.find(p => String(p.id) === String(id));
+        if (!item) return;
+
+        const subject = encodeURIComponent('Predmet: ' + item.naziv_predmeta + ' (' + (item.interni_broj || '') + ')');
+        const body = encodeURIComponent('Detalji predmeta:\n\nNaziv: ' + item.naziv_predmeta + '\nOznaka/Broj: ' + (item.interni_broj || '/') + '\nStranka: ' + (item.investor || '/') + '\nObrađivač: ' + (item.obradjivac || '/') + '\nStatus: ' + (item.status || '/') + '\nRok: ' + (item.rok_datum || '/') + '\nNapomena: ' + (item.napomena || '/'));
+
+        window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
+      } catch (err) {
+        alert('Greška: ' + err.message);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('predmet-form').reset();
+      document.getElementById('p-id').value = '';
+      document.getElementById('p-slika-base64').value = '';
+      document.getElementById('img-preview-container').innerHTML = '';
+      document.getElementById('p-datum').valueAsDate = new Date();
+      toggleCEOP();
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

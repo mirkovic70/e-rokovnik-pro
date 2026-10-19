@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Univerzalni Rokovnik Pro</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 15px; }
+    .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h2 { font-size: 1.1rem; color: #1a365d; margin-top: 0; }
+    label { font-size: 12px; font-weight: bold; display: block; margin-top: 8px; color: #4a5568; }
+    input, select, textarea, button { width: 100%; padding: 10px; margin-top: 4px; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 6px; }
+    button { background: #2b6cb0; color: white; font-weight: bold; border: none; cursor: pointer; margin-top: 12px; }
+    .item { background: #fff; border-left: 4px solid #2b6cb0; padding: 10px; margin-bottom: 8px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .btn-mail { background: #805ad5; margin-top: 5px; }
+    .btn-del { background: #e53e3e; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📋 Univerzalni Rokovnik Pro</h2>
+    <form id="predmet-form">
+      <label>Oznaka / Broj *</label>
+      <input type="text" id="interni_broj" required placeholder="INT-2026-01">
+      
+      <label>Naziv predmeta *</label>
+      <input type="text" id="naziv_predmeta" required placeholder="Unesite naziv">
+      
+      <label>Vrsta predmeta</label>
+      <select id="vrsta_predmeta">
+        <option value="Opšti predmet / Zadatak">Opšti predmet / Zadatak</option>
+        <option value="CEOP i Građevinski postupak">CEOP i Građevinski postupak</option>
+        <option value="Katastar i Parcele">Katastar i Parcele</option>
+      </select>
+
+      <label>Stranka / Investitor</label>
+      <input type="text" id="investor">
+
+      <label>Status</label>
+      <select id="status">
+        <option value="U radu">U radu</option>
+        <option value="Završeno">Završeno</option>
+      </select>
+
+      <label>Napomena</label>
+      <textarea id="napomena" rows="2"></textarea>
+
+      <button type="submit">💾 Sačuvaj Predmet</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>📂 Registar Predmeta (PostgreSQL)</h2>
+    <div id="predmeti-lista">Učitavanje...</div>
+  </div>
+
+  <script>
+    let predmetiSvi = [];
+
+    async function ucitaj() {
+      const el = document.getElementById('predmeti-lista');
+      try {
+        const res = await fetch('/api/predmeti');
+        predmetiSvi = await res.json();
+        
+          el.innerHTML = '<small style="color:#718096;">Nema unetih predmeta u bazi.</small>';
+          return;
+        }
+
+        let html = '';
+        predmetiSvi.forEach(p => {
+          html += '<div class="item">' +
+            '<strong>' + (p.naziv_predmeta || 'Bez naziva') + '</strong> (' + (p.interni_broj || '-') + ')<br>' +
+            '<small>Vrsta: ' + (p.vrsta_predmeta || '-') + ' | Status: ' + (p.status || '-') + '</small><br>' +
+            '<small>Stranka: ' + (p.investor || '/') + '</small>' +
+            (p.napomena ? '<br><small>Napomena: ' + p.napomena + '</small>' : '') +
+            '<button class="btn-mail" onclick="posaljiMail(' + p.id + ')">✉️ Pošalji E-mail</button> ' +
+            '<button class="btn-del" onclick="obrisi(' + p.id + ')">🗑️ Obriši</button>' +
+          '</div>';
+        });
+        el.innerHTML = html;
+      } catch (err) {
+        el.innerHTML = '<span style="color:red;">Greška: ' + err.message + '</span>';
+      }
+    }
+
+    document.getElementById('predmet-form').onsubmit = async function(e) {
+      e.preventDefault();
+      const payload = {
+        interni_broj: document.getElementById('interni_broj').value,
+        naziv_predmeta: document.getElementById('naziv_predmeta').value,
+        vrsta_predmeta: document.getElementById('vrsta_predmeta').value,
+        investor: document.getElementById('investor').value,
+        status: document.getElementById('status').value,
+        napomena: document.getElementById('napomena').value,
+        datum_prijema: new Date().toISOString().split('T')[0]
+      };
+
+      try {
+        const res = await fetch('/api/predmeti', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          document.getElementById('predmet-form').reset();
+          ucitaj();
+        } else {
+          alert('Greška pri čuvanju na serveru!');
+        }
+      } catch(e) {
+        alert('Mrežna greška: ' + e.message);
+      }
+    };
+
+    async function obrisi(id) {
+      if (confirm('Obriši ovaj predmet iz baze?')) {
+        await fetch('/api/obrisi', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({id})
+        });
+        ucitaj();
+      }
+    }
+
+    async function posaljiMail(id) {
+      const p = predmetiSvi.find(x => x.id == id);
+      const addr = prompt('Unesite e-mail adresu primaoca:', 'mirkovic70@gmail.com');
+
+      const payload = {
+        to: addr,
+        subject: 'Predmet [' + (p.interni_broj || '') + ']: ' + (p.naziv_predmeta || ''),
+        bodyText: 'Detalji predmeta:
+• Broj: ' + p.interni_broj + '
+• Naziv: ' + p.naziv_predmeta + '
+• Stranka: ' + (p.investor || '-') + '
+• Napomena: ' + (p.napomena || '-')
+      };
+
+      try {
+        const res = await fetch('/api/send-email', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const rData = await res.json();
+        if (res.ok) alert('✅ ' + rData.message);
+        else alert('❌ ' + rData.error);
+      } catch (e) {
+        alert('Greška pri slanju: ' + e.message);
+      }
+    }
+
+    window.onload = ucitaj;
+  </script>
+</body>
+</html>
