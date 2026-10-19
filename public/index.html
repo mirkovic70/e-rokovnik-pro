@@ -35,7 +35,10 @@
     .item-title { font-size: 0.95rem; font-weight: bold; color: #184173; word-break: break-word; }
     .badge { padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; background: #e4e6eb; color: #4b4f56; flex-shrink: 0; }
     .badge.u-radu { background: #e7f3ff; color: #1877f2; }
-    .badge.zavrsen { background: #e2f6ea; color: #2e7d32; }
+    .badge.dopuna { background: #fff8e1; color: #f57f17; }
+    .badge.cekanje { background: #f3e5f5; color: #7b1fa2; }
+    .badge.odbacen { background: #ffebee; color: #c62828; }
+    .badge.usaglasavanje { background: #e0f2f1; color: #00695c; }
     
     .item-details { font-size: 0.8rem; color: #606770; line-height: 1.4; margin-bottom: 8px; word-break: break-word; }
     .item-thumb { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; border-radius: 6px; border: 1px solid #ccc; margin-top: 6px; display: block; }
@@ -69,12 +72,20 @@
       <div class="form-grid">
         <div class="form-group">
           <label>Vrsta predmeta *</label>
-          <select id="vrsta_predmeta">
-            <option value="Opšti predmet / Zadatak">Opšti predmet / Zadatak</option>
-            <option value="Objedinjena procedura">Objedinjena procedura</option>
-            <option value="Urbanizam">Urbanizam</option>
-            <option value="Ozren">Ozren</option>
+          <select id="vrsta_predmeta" onchange="proveriCustomVrstu(this)">
+            <option value="Pravni">Pravni</option>
+            <option value="Sudski">Sudski</option>
+            <option value="Katastar">Katastar</option>
+            <option value="Uprava">Uprava</option>
+            <option value="CEOP">CEOP</option>
+            <option value="Građevinski">Građevinski</option>
+            <option value="Geometar">Geometar</option>
+            <option value="EPS">EPS</option>
+            <option value="Vodovod">Vodovod</option>
+            <option value="Ostalo">Ostalo</option>
+            <option value="__custom__">➕ Ukucaj novu vrstu...</option>
           </select>
+          <input type="text" id="custom_vrsta" placeholder="Unesite vrstu predmeta..." style="display:none; margin-top:4px;">
         </div>
         <div class="form-group">
           <label>Oznaka / Broj *</label>
@@ -104,14 +115,42 @@
           <label>Status</label>
           <select id="status">
             <option value="U radu">U radu</option>
-            <option value="Završen">Završen</option>
-            <option value="Na čekanju">Na čekanju</option>
+            <option value="Dopuna">Dopuna</option>
+            <option value="Čekanje">Čekanje</option>
+            <option value="Odbačen">Odbačen</option>
+            <option value="Usaglašavanje">Usaglašavanje</option>
           </select>
         </div>
         <div class="form-group">
           <label>Potpisnik</label>
           <input type="text" id="potpisnik" placeholder="Potpisnik">
         </div>
+
+        <div class="form-group">
+          <label>CEOP broj</label>
+          <input type="text" id="ceop_broj" placeholder="CEOP-...">
+        </div>
+        <div class="form-group">
+          <label>ROP broj</label>
+          <input type="text" id="rop_broj" placeholder="ROP-...">
+        </div>
+        <div class="form-group">
+          <label>Opština</label>
+          <input type="text" id="opstina" placeholder="Opština">
+        </div>
+        <div class="form-group">
+          <label>Katastarska opština</label>
+          <input type="text" id="katastarska_opstina" placeholder="K.O.">
+        </div>
+        <div class="form-group">
+          <label>Broj parcele</label>
+          <input type="text" id="broj_parcele" placeholder="Broj parcele">
+        </div>
+        <div class="form-group">
+          <label>Nadležni organ</label>
+          <input type="text" id="nadlezni_organ" placeholder="Nadležni organ">
+        </div>
+
         <div class="form-group">
           <label>Napomene</label>
           <textarea id="napomena" rows="2" placeholder="Napomena..."></textarea>
@@ -151,6 +190,17 @@
     ucitajPredmete();
   });
 
+  function proveriCustomVrstu(select) {
+    const customInput = document.getElementById('custom_vrsta');
+    if (select.value === '__custom__') {
+      customInput.style.display = 'block';
+      customInput.focus();
+    } else {
+      customInput.style.display = 'none';
+      customInput.value = '';
+    }
+  }
+
   function obradiFajl(e) {
     const file = e.target.files[0];
     if (file) {
@@ -175,6 +225,16 @@
     }
   }
 
+  function dobiStatusKlasu(status) {
+    if (!status) return 'u-radu';
+    const s = status.toLowerCase();
+    if (s.includes('dopun')) return 'dopuna';
+    if (s.includes('čekan') || s.includes('cekan')) return 'cekanje';
+    if (s.includes('odbačen') || s.includes('odbacen')) return 'odbacen';
+    if (s.includes('usaglaš') || s.includes('usaglas')) return 'usaglasavanje';
+    return 'u-radu';
+  }
+
   function prikaziKartice(podaci) {
     const kontekst = document.getElementById('listaPredmeta');
     kontekst.innerHTML = '';
@@ -187,7 +247,7 @@
     podaci.forEach(p => {
       const div = document.createElement('div');
       div.className = 'item-card';
-      const statusClass = p.status === 'Završen' ? 'zavrsen' : 'u-radu';
+      const statusClass = dobiStatusKlasu(p.status);
       
       div.innerHTML = `
         <div class="item-header">
@@ -200,6 +260,12 @@
           <b>Stranka:</b> ${p.investor || '-'}<br>
           <b>Obrađivač:</b> ${p.obradivac || '-'}<br>
           <b>Datum:</b> ${p.datum_prijema || '-'} | <b>Rok:</b> ${p.rok_datum || '-'}
+          ${p.ceop_broj ? `<br><b>CEOP:</b> ${p.ceop_broj}` : ''}
+          ${p.rop_broj ? `<br><b>ROP:</b> ${p.rop_broj}` : ''}
+          ${p.opstina ? `<br><b>Opština:</b> ${p.opstina}` : ''}
+          ${p.katastarska_opstina ? `<br><b>K.O.:</b> ${p.katastarska_opstina}` : ''}
+          ${p.broj_parcele ? `<br><b>Parcela:</b> ${p.broj_parcele}` : ''}
+          ${p.nadlezni_organ ? `<br><b>Nadležni organ:</b> ${p.nadlezni_organ}` : ''}
           ${p.napomena ? `<br><i>Napomena: ${p.napomena}</i>` : ''}
         </div>
         ${p.slika_base64 ? `<img src="${p.slika_base64}" class="item-thumb" onclick="window.open('${p.slika_base64}')">` : ''}
@@ -215,9 +281,15 @@
 
   document.getElementById('predmetForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    let izabranaVrsta = document.getElementById('vrsta_predmeta').value;
+    if (izabranaVrsta === '__custom__') {
+      izabranaVrsta = document.getElementById('custom_vrsta').value.trim() || 'Ostalo';
+    }
+
     const payload = {
       id: document.getElementById('predmetId').value || null,
-      vrsta_predmeta: document.getElementById('vrsta_predmeta').value,
+      vrsta_predmeta: izabranaVrsta,
       interni_broj: document.getElementById('interni_broj').value,
       naziv_predmeta: document.getElementById('naziv_predmeta').value,
       investor: document.getElementById('investor').value,
@@ -226,6 +298,12 @@
       datum_prijema: document.getElementById('datum_prijema').value,
       rok_datum: document.getElementById('rok_datum').value,
       status: document.getElementById('status').value,
+      ceop_broj: document.getElementById('ceop_broj').value,
+      rop_broj: document.getElementById('rop_broj').value,
+      opstina: document.getElementById('opstina').value,
+      katastarska_opstina: document.getElementById('katastarska_opstina').value,
+      broj_parcele: document.getElementById('broj_parcele').value,
+      nadlezni_organ: document.getElementById('nadlezni_organ').value,
       slika_base64: document.getElementById('slika_base64').value,
       napomena: document.getElementById('napomena').value
     };
@@ -250,7 +328,21 @@
     const p = SVI_PREDMETI.find(item => item.id === id);
     if (!p) return;
     document.getElementById('predmetId').value = p.id;
-    document.getElementById('vrsta_predmeta').value = p.vrsta_predmeta || 'Opšti predmet / Zadatak';
+    
+    const vrstaSelect = document.getElementById('vrsta_predmeta');
+    const customInput = document.getElementById('custom_vrsta');
+    const postojecaOpcija = Array.from(vrstaSelect.options).find(o => o.value === p.vrsta_predmeta);
+    
+    if (postojecaOpcija) {
+      vrstaSelect.value = p.vrsta_predmeta;
+      customInput.style.display = 'none';
+      customInput.value = '';
+    } else {
+      vrstaSelect.value = '__custom__';
+      customInput.style.display = 'block';
+      customInput.value = p.vrsta_predmeta || '';
+    }
+
     document.getElementById('interni_broj').value = p.interni_broj || '';
     document.getElementById('naziv_predmeta').value = p.naziv_predmeta || '';
     document.getElementById('investor').value = p.investor || '';
@@ -259,6 +351,12 @@
     document.getElementById('datum_prijema').value = p.datum_prijema || '';
     document.getElementById('rok_datum').value = p.rok_datum || '';
     document.getElementById('status').value = p.status || 'U radu';
+    document.getElementById('ceop_broj').value = p.ceop_broj || '';
+    document.getElementById('rop_broj').value = p.rop_broj || '';
+    document.getElementById('opstina').value = p.opstina || '';
+    document.getElementById('katastarska_opstina').value = p.katastarska_opstina || '';
+    document.getElementById('broj_parcele').value = p.broj_parcele || '';
+    document.getElementById('nadlezni_organ').value = p.nadlezni_organ || '';
     document.getElementById('slika_base64').value = p.slika_base64 || '';
     document.getElementById('napomena').value = p.napomena || '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -283,6 +381,7 @@
     document.getElementById('predmetForm').reset();
     document.getElementById('predmetId').value = '';
     document.getElementById('slika_base64').value = '';
+    document.getElementById('custom_vrsta').style.display = 'none';
     document.getElementById('datum_prijema').valueAsDate = new Date();
   }
 
@@ -292,7 +391,9 @@
       (p.naziv_predmeta && p.naziv_predmeta.toLowerCase().includes(q)) ||
       (p.investor && p.investor.toLowerCase().includes(q)) ||
       (p.interni_broj && p.interni_broj.toLowerCase().includes(q)) ||
-      (p.obradivac && p.obradivac.toLowerCase().includes(q))
+      (p.obradivac && p.obradivac.toLowerCase().includes(q)) ||
+      (p.vrsta_predmeta && p.vrsta_predmeta.toLowerCase().includes(q)) ||
+      (p.status && p.status.toLowerCase().includes(q))
     );
     prikaziKartice(filtrirano);
   }
