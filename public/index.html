@@ -7,9 +7,6 @@
   <title>Univerzalni Rokovnik Pro</title>
   
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a365d'/><text x='50%' y='65%' font-size='60' text-anchor='middle'>📋</text></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a365d'/><text x='50%' y='65%' font-size='60' text-anchor='middle'>📋</text></svg>">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1a365d">
 
   <style>
@@ -27,15 +24,14 @@
     header { background: var(--primary); color: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
     
     .nav-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none; }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .tab-btn { background: #e2e8f0; color: #4a5568; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 13px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .tab-btn { background: #e2e8f0; color: #4a5568; border: none; padding: 10px 14px; border-radius: 8px; font-weight: bold; font-size: 13px; white-space: nowrap; cursor: pointer; }
     .tab-btn.active { background: var(--accent); color: white; }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
     .card { background: var(--card); padding: 16px; border-radius: 8px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    h2 { font-size: 1rem; margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+    h2 { font-size: 1rem; margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 6px; color: var(--primary); }
     label { font-size: 12px; font-weight: bold; color: #4a5568; display: block; margin-top: 8px; }
     input, select, textarea, button { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-top: 4px; }
     button { background: var(--accent); color: white; font-weight: bold; border: none; cursor: pointer; border-radius: 6px; }
@@ -46,6 +42,9 @@
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
     .ceop-box { background: #ebf8ff; border: 1px solid #bee3f8; padding: 10px; border-radius: 6px; margin-top: 8px; }
+    
+    /* Kontejner sa skrolovanjem */
+    .scroll-container { max-height: 550px; overflow-y: auto; padding-right: 4px; }
     .item-card { background: white; border-left: 5px solid var(--accent); padding: 12px; border-radius: 6px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .item-title { font-size: 1rem; font-weight: bold; color: var(--primary); }
@@ -53,6 +52,11 @@
     .item-details { font-size: 12px; color: #4a5568; line-height: 1.4; margin-bottom: 10px; }
     .action-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
     .preview-img { max-width: 100%; height: auto; max-height: 140px; border-radius: 6px; margin-top: 6px; border: 1px solid #e2e8f0; }
+
+    /* Paginacija */
+    .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+    .pagination button { width: auto; padding: 6px 12px; font-size: 13px; background: #e2e8f0; color: #2d3748; }
+    .pagination button.active { background: var(--accent); color: white; }
   </style>
 </head>
 <body>
@@ -70,7 +74,7 @@
 
   <div id="tab-predmeti" class="tab-content active">
     <div class="card">
-      <h2>➕ Unos Novog Predmeta</h2>
+      <h2>➕ Unos / Izmena Predmeta</h2>
       <form id="predmet-form">
         <input type="hidden" id="p-id">
         
@@ -191,9 +195,10 @@
 
     <div class="card">
       <h2>📁 Registar Predmeta</h2>
-      <div id="items-list">
+      <div id="items-list" class="scroll-container">
         <div style="text-align: center; color: #718096; padding: 10px;">Učitavanje...</div>
       </div>
+      <div id="pagination-box" class="pagination"></div>
     </div>
   </div>
 
@@ -220,6 +225,9 @@
 
   <script>
     let currentImageBase64 = "";
+    let allPredmeti = [];
+    let currentPage = 1;
+    const itemsPerPage = 5;
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('p-datum').valueAsDate = new Date();
@@ -257,38 +265,62 @@
         const res = await fetch('/api/predmeti');
         const data = await res.json();
         
-        if (!Array.isArray(data) || data.length === 0) {
-          container.innerHTML = '<div style="text-align: center; color: #718096; padding: 10px;">Nema unesenih predmeta u bazi.</div>';
-          return;
-        }
-
-        renderRokoviAndAnalitika(data);
-
-        container.innerHTML = data.map(item => {
-          let ceopHtml = item.ceop_broj ? '<br><strong>CEOP:</strong> ' + escapeHtml(item.ceop_broj) : '';
-          let napomenaHtml = item.napomena ? '<br><strong>Napomena:</strong> ' + escapeHtml(item.napomena) : '';
-          let slikaHtml = item.slika_base64 ? '<br><img src="' + item.slika_base64 + '" class="preview-img">' : '';
-
-          return '<div class="item-card">' +
-            '<div class="item-header">' +
-              '<span class="item-title">' + escapeHtml(item.naziv_predmeta || 'Bez naziva') + '</span>' +
-              '<span class="badge">' + escapeHtml(item.status || 'U radu') + '</span>' +
-            '</div>' +
-            '<div class="item-details">' +
-              '<strong>Oznaka:</strong> ' + escapeHtml(item.interni_broj || '/') + ' | <strong>Vrsta:</strong> ' + escapeHtml(item.vrsta_predmeta || '/') + '<br>' +
-              '<strong>Stranka:</strong> ' + escapeHtml(item.investor || '/') + ' | <strong>Obrađivač:</strong> ' + escapeHtml(item.obradjivac || '/') + '<br>' +
-              '<strong>Datum:</strong> ' + escapeHtml(item.datum_prijema || '/') + ' | <strong>Rok:</strong> ' + escapeHtml(item.rok_datum || '/') +
-              ceopHtml + napomenaHtml + slikaHtml +
-            '</div>' +
-            '<div class="action-btn-group">' +
-              '<button class="btn-edit" onclick="editPredmet(' + item.id + ')"> Izmeni</button>' +
-              '<button class="btn-mail" onclick="sendMailNative(' + item.id + ')">✉️ E-mail</button>' +
-              '<button class="btn-delete" onclick="deletePredmet(' + item.id + ')">🗑️ Obriši</button>' +
-            '</div>' +
-          '</div>';
-        }).join('');
+        allPredmeti = Array.isArray(data) ? data : [];
+        renderRokoviAndAnalitika(allPredmeti);
+        renderPage(1);
       } catch (err) {
         container.innerHTML = '<div style="color: var(--danger); text-align: center;">Greška pri učitavanju: ' + err.message + '</div>';
+      }
+    }
+
+    function renderPage(page) {
+      currentPage = page;
+      const container = document.getElementById('items-list');
+      const paginationBox = document.getElementById('pagination-box');
+
+      if (allPredmeti.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #718096; padding: 10px;">Nema unesenih predmeta u bazi.</div>';
+        paginationBox.innerHTML = '';
+        return;
+      }
+
+      const startIndex = (page - 1) * itemsPerPage;
+      const pageItems = allPredmeti.slice(startIndex, startIndex + itemsPerPage);
+
+      container.innerHTML = pageItems.map(item => {
+        let ceopHtml = item.ceop_broj ? '<br><strong>CEOP:</strong> ' + escapeHtml(item.ceop_broj) : '';
+        let napomenaHtml = item.napomena ? '<br><strong>Napomena:</strong> ' + escapeHtml(item.napomena) : '';
+        let slikaHtml = item.slika_base64 ? '<br><img src="' + item.slika_base64 + '" class="preview-img">' : '';
+
+        return '<div class="item-card">' +
+          '<div class="item-header">' +
+            '<span class="item-title">' + escapeHtml(item.naziv_predmeta || 'Bez naziva') + '</span>' +
+            '<span class="badge">' + escapeHtml(item.status || 'U radu') + '</span>' +
+          '</div>' +
+          '<div class="item-details">' +
+            '<strong>Oznaka:</strong> ' + escapeHtml(item.interni_broj || '/') + ' | <strong>Vrsta:</strong> ' + escapeHtml(item.vrsta_predmeta || '/') + '<br>' +
+            '<strong>Stranka:</strong> ' + escapeHtml(item.investor || '/') + ' | <strong>Obrađivač:</strong> ' + escapeHtml(item.obradjivac || '/') + '<br>' +
+            '<strong>Datum:</strong> ' + escapeHtml(item.datum_prijema || '/') + ' | <strong>Rok:</strong> ' + escapeHtml(item.rok_datum || '/') +
+            ceopHtml + napomenaHtml + slikaHtml +
+          '</div>' +
+          '<div class="action-btn-group">' +
+            '<button class="btn-edit" onclick="editPredmet(' + item.id + ')">Izmeni</button>' +
+            '<button class="btn-mail" onclick="sendMailNative(' + item.id + ')">✉️ E-mail</button>' +
+            '<button class="btn-delete" onclick="deletePredmet(' + item.id + ')">🗑️ Obriši</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      // Paginacija dugmad
+      const totalPages = Math.ceil(allPredmeti.length / itemsPerPage);
+      if (totalPages > 1) {
+        let pBtns = '';
+        for (let i = 1; i <= totalPages; i++) {
+          pBtns += '<button class="' + (i === page ? 'active' : '') + '" onclick="renderPage(' + i + ')">' + i + '</button>';
+        }
+        paginationBox.innerHTML = pBtns;
+      } else {
+        paginationBox.innerHTML = '';
       }
     }
 
@@ -343,55 +375,49 @@
         const result = await res.json();
         
         if (result.success) {
-          alert('✅ Predmet uspešno sačuvan u PostgreSQL!');
+          alert('✅ Predmet uspešno sačuvan!');
           resetForm();
           loadPredmeti();
         } else {
-          alert('❌ Greška: ' + (result.error || 'Neuspešno čuvanje.'));
+          alert('❌ Greška pri čuvanju: ' + (result.error || 'Nepoznata greška'));
         }
       } catch (err) {
-        alert('❌ Došlo je do greške: ' + err.message);
+        alert('❌ Greška: ' + err.message);
       }
     });
 
-    async function editPredmet(id) {
-      try {
-        const res = await fetch('/api/predmeti');
-        const data = await res.json();
-        const item = data.find(p => String(p.id) === String(id));
-        if (!item) return;
+    function editPredmet(id) {
+      const item = allPredmeti.find(p => String(p.id) === String(id));
+      if (!item) return;
 
-        document.getElementById('p-id').value = item.id;
-        document.getElementById('p-vrsta').value = item.vrsta_predmeta || 'Opšti predmet / Zadatak';
-        document.getElementById('p-interni').value = item.interni_broj || '';
-        document.getElementById('p-naziv').value = item.naziv_predmeta || '';
-        document.getElementById('p-investor').value = item.investor || '';
-        document.getElementById('p-obradjivac').value = item.obradjivac || '';
-        document.getElementById('p-potpisnik').value = item.potpisnik || '';
-        document.getElementById('p-datum').value = item.datum_prijema || '';
-        document.getElementById('p-rok').value = item.rok_datum || '';
-        document.getElementById('p-status').value = item.status || 'U radu';
-        document.getElementById('p-napomena').value = item.napomena || '';
-        document.getElementById('p-ceop').value = item.ceop_broj || '';
-        document.getElementById('p-rop').value = item.rop_broj || '';
-        document.getElementById('p-opstina').value = item.opstina || '';
-        document.getElementById('p-ko').value = item.katastarska_opstina || '';
-        document.getElementById('p-parcela').value = item.broj_parcele || '';
-        document.getElementById('p-organ').value = item.nadlezni_organ || '';
-        document.getElementById('p-slika-base64').value = item.slika_base64 || '';
+      document.getElementById('p-id').value = item.id;
+      document.getElementById('p-vrsta').value = item.vrsta_predmeta || 'Opšti predmet / Zadatak';
+      document.getElementById('p-interni').value = item.interni_broj || '';
+      document.getElementById('p-naziv').value = item.naziv_predmeta || '';
+      document.getElementById('p-investor').value = item.investor || '';
+      document.getElementById('p-obradjivac').value = item.obradjivac || '';
+      document.getElementById('p-potpisnik').value = item.potpisnik || '';
+      document.getElementById('p-datum').value = item.datum_prijema || '';
+      document.getElementById('p-rok').value = item.rok_datum || '';
+      document.getElementById('p-status').value = item.status || 'U radu';
+      document.getElementById('p-napomena').value = item.napomena || '';
+      document.getElementById('p-ceop').value = item.ceop_broj || '';
+      document.getElementById('p-rop').value = item.rop_broj || '';
+      document.getElementById('p-opstina').value = item.opstina || '';
+      document.getElementById('p-ko').value = item.katastarska_opstina || '';
+      document.getElementById('p-parcela').value = item.broj_parcele || '';
+      document.getElementById('p-organ').value = item.nadlezni_organ || '';
+      document.getElementById('p-slika-base64').value = item.slika_base64 || '';
 
-        if (item.slika_base64) {
-          document.getElementById('img-preview-container').innerHTML = '<img src="' + item.slika_base64 + '" class="preview-img">';
-        } else {
-          document.getElementById('img-preview-container').innerHTML = '';
-        }
-
-        toggleCEOP();
-        switchTab('tab-predmeti', document.querySelectorAll('.tab-btn')[0]);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } catch (err) {
-        alert('Greška pri učitavanju za izmenu: ' + err.message);
+      if (item.slika_base64) {
+        document.getElementById('img-preview-container').innerHTML = '<img src="' + item.slika_base64 + '" class="preview-img">';
+      } else {
+        document.getElementById('img-preview-container').innerHTML = '';
       }
+
+      toggleCEOP();
+      switchTab('tab-predmeti', document.querySelectorAll('.tab-btn')[0]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     async function deletePredmet(id) {
@@ -413,23 +439,17 @@
       }
     }
 
-    async function sendMailNative(id) {
+    function sendMailNative(id) {
       const email = prompt('Unesite e-mail adresu primaoca:');
       if (!email) return;
 
-      try {
-        const res = await fetch('/api/predmeti');
-        const data = await res.json();
-        const item = data.find(p => String(p.id) === String(id));
-        if (!item) return;
+      const item = allPredmeti.find(p => String(p.id) === String(id));
+      if (!item) return;
 
-        const subject = encodeURIComponent('Predmet: ' + item.naziv_predmeta + ' (' + (item.interni_broj || '') + ')');
-        const body = encodeURIComponent('Detalji predmeta:\n\nNaziv: ' + item.naziv_predmeta + '\nOznaka/Broj: ' + (item.interni_broj || '/') + '\nStranka: ' + (item.investor || '/') + '\nObrađivač: ' + (item.obradjivac || '/') + '\nStatus: ' + (item.status || '/') + '\nRok: ' + (item.rok_datum || '/') + '\nNapomena: ' + (item.napomena || '/'));
+      const subject = encodeURIComponent('Predmet: ' + item.naziv_predmeta + ' (' + (item.interni_broj || '') + ')');
+      const body = encodeURIComponent('Detalji predmeta:\n\nNaziv: ' + item.naziv_predmeta + '\nOznaka/Broj: ' + (item.interni_broj || '/') + '\nStranka: ' + (item.investor || '/') + '\nObrađivač: ' + (item.obradjivac || '/') + '\nStatus: ' + (item.status || '/') + '\nRok: ' + (item.rok_datum || '/') + '\nNapomena: ' + (item.napomena || '/'));
 
-        window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
-      } catch (err) {
-        alert('Greška: ' + err.message);
-      }
+      window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
     }
 
     function resetForm() {
