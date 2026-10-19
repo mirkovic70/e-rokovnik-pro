@@ -20,7 +20,6 @@ async function initDb() {
   try {
     const client = await pool.connect();
     
-    // Kreiranje tabele sa svim poljima
     await client.query(`
       CREATE TABLE IF NOT EXISTS predmeti (
         id SERIAL PRIMARY KEY,
@@ -45,7 +44,6 @@ async function initDb() {
       );
     `);
 
-    // Automatsko dodavanje novih kolona ako je tabela ranije kreirana sa starim kolona
     const alterQueries = [
       'ALTER TABLE predmeti ADD COLUMN IF NOT EXISTS vrsta_predmeta TEXT;',
       'ALTER TABLE predmeti ADD COLUMN IF NOT EXISTS interni_broj TEXT;',
@@ -71,7 +69,7 @@ async function initDb() {
     }
 
     client.release();
-    console.log('✅ PostgreSQL baza je sinhronizovana i sprema za rad!');
+    console.log('✅ PostgreSQL baza je sinhronizovana!');
   } catch (err) {
     console.error('❌ Greška sa bazom:', err);
   }
@@ -79,7 +77,6 @@ async function initDb() {
 
 initDb();
 
-// 1. Dohvatanje predmeta
 app.get('/api/predmeti', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM predmeti ORDER BY id DESC;');
@@ -89,12 +86,10 @@ app.get('/api/predmeti', async (req, res) => {
   }
 });
 
-// 2. Unos ili Izmena predmeta
 app.post('/api/predmeti', async (req, res) => {
   const b = req.body;
   try {
     if (b.id) {
-      // Izmena postojećeg predmeta
       const queryText = `
         UPDATE predmeti SET
           vrsta_predmeta=$1, interni_broj=$2, naziv_predmeta=$3, investor=$4,
@@ -114,7 +109,6 @@ app.post('/api/predmeti', async (req, res) => {
       const result = await pool.query(queryText, values);
       return res.json({ success: true, item: result.rows[0] });
     } else {
-      // Unos novog predmeta
       const queryText = `
         INSERT INTO predmeti (
           vrsta_predmeta, interni_broj, naziv_predmeta, investor, obradivac,
@@ -139,10 +133,20 @@ app.post('/api/predmeti', async (req, res) => {
   }
 });
 
-// 3. Brisanje predmeta
 app.post('/api/obrisi', async (req, res) => {
   const { id } = req.body;
   try {
     await pool.query('DELETE FROM predmeti WHERE id = $1;', [id]);
     res.json({ success: true, id });
-  } catch (err)
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Greška pri brisanju' });
+  }
+});
+
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server radi na portu ${PORT}`);
+});
