@@ -3,7 +3,7 @@
 
 /*
   UNIVERZALNI ROKOVNIK PRO 2.0
-  FAZA 3 - DOSIJE, ISTORIJA I TOK POSTUPANJA
+  FAZA 4 - ROKOVI NA POČETNOJ I GMAIL SLANJE
 
   Backend:
   Node.js / Express / PostgreSQL
@@ -368,6 +368,7 @@ async function refreshAll() {
       : [];
 
     renderPredmeti();
+    await renderPocetnaRokovi();
     populateDocumentSelect();
     renderCalendar();
     renderAnalytics();
@@ -1782,6 +1783,48 @@ async function deleteDocument(id) {
   }
 }
 
+// FAZA 4: kartice i rokovi na početnoj strani (registar)
+async function renderPocetnaRokovi() {
+  const registar = $("tab-registar");
+  if (!registar) return;
+  let panel = $("faza4-rokovi");
+  if (!panel) {
+    panel = document.createElement("section");
+    panel.id = "faza4-rokovi";
+    panel.style.cssText = "margin:16px 0;padding:16px;border:1px solid #cbd5e1;border-radius:12px";
+    registar.prepend(panel);
+  }
+  try {
+    const d = await api("/rokovi/pregled");
+    const kartice = [
+      ["Ukupno predmeta", d.ukupno_predmeta],
+      ["Rok danas", d.danas_broj],
+      ["U narednih 7 dana", d.uskoro],
+      ["Istekli rokovi", d.isteklo]
+    ];
+    panel.innerHTML = `
+      <h2>Kontrolna tabla — rokovi</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0">
+        ${kartice.map(([ime, broj]) => `<div style="padding:14px;background:#f1f5f9;border-radius:9px;color:#0f172a">
+          <div style="font-size:26px;font-weight:bold">${Number(broj) || 0}</div>
+          <div>${escapeHTML(ime)}</div></div>`).join("")}
+      </div>
+      <h3>Prioritetni rokovi</h3>
+      ${d.stavke.filter(x => x.dana <= 7).slice(0, 30).map(x => `
+        <div style="border-bottom:1px solid #ddd;padding:9px 0">
+          <b>${escapeHTML(x.interni_broj)}</b> — ${escapeHTML(x.naziv_predmeta)}
+          <span style="margin-left:8px;color:${x.dana < 0 ? '#b91c1c' : '#9a6700'}">
+            ${escapeHTML(x.datum)} · ${x.dana < 0 ? 'Istekao' : x.dana === 0 ? 'Danas' : 'Za ' + x.dana + ' dana'}
+          </span>
+          ${x.izvor === 'aktivnost' ? `<div>Korak: ${escapeHTML(x.sledeci_korak || '—')}</div>` : ''}
+          <button type="button" class="btn btn-small" data-action="dosije" data-id="${Number(x.id)}">Otvori dosije</button>
+        </div>`).join("") || "<p>Nema hitnih rokova.</p>"}
+    `;
+  } catch (err) {
+    panel.textContent = "Pregled rokova nije dostupan: " + err.message;
+  }
+}
+
 // ========================================
 // ROKOVI
 // ========================================
@@ -2010,49 +2053,23 @@ function exportCSV() {
 // EMAIL
 // ========================================
 
-function sendPredmetMail(id) {
-  const p = findPredmet(id);
-
-  if (!p) {
-    message("Predmet nije pronađen.", true);
-    return;
+async function posaljiEmail(tip, id = null) {
+  const primalac = window.prompt("Unesite e-mail adresu primaoca:");
+  if (primalac === null) return;
+  if (!primalac.trim()) return message("Adresa primaoca je obavezna.", true);
+  try {
+    const rezultat = await api("/email/posalji", {
+      method: "POST",
+      body: JSON.stringify({ primalac: primalac.trim(), tip, predmet_id: id })
+    });
+    message(rezultat.message || "E-mail je poslat.");
+  } catch (err) {
+    message("E-mail nije poslat: " + err.message, true);
   }
-
-  const subject =
-    `Predmet ${p.interni_broj} - ${p.naziv_predmeta}`;
-
-  const body = polja.map(key =>
-    `${naziviPolja[key]}: ${prikazVrednosti(p[key], key)}`
-  ).join("\n");
-
-  window.location.href =
-    "mailto:?subject=" +
-    encodeURIComponent(subject) +
-    "&body=" +
-    encodeURIComponent(body);
 }
 
-function sendSummaryMail() {
-  const items = filteredPredmeti();
-
-  const subject =
-    "Rokovnik Pro - pregled predmeta";
-
-  const body = items.map(p =>
-    [
-      p.interni_broj,
-      p.naziv_predmeta,
-      "Status: " + p.status,
-      "Rok: " + datum(p.rok_datum)
-    ].join("\n")
-  ).join("\n\n");
-
-  window.location.href =
-    "mailto:?subject=" +
-    encodeURIComponent(subject) +
-    "&body=" +
-    encodeURIComponent(body);
-}
+function sendPredmetMail(id) { return posaljiEmail("predmet", id); }
+function sendSummaryMail() { return posaljiEmail("pregled"); }
 
 // ========================================
 // DOGADJAJI
