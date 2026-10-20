@@ -1,402 +1,45 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Univerzalni Rokovnik Pro</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    html, body { width: 100%; overflow-x: hidden; background-color: #f0f2f5; color: #1c1e21; padding: 8px; }
-    .container { width: 100%; max-width: 800px; margin: 0 auto; }
-    
-    .header-bar { background: #184173; color: white; padding: 12px 14px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-    
-    .nav-tabs { display: flex; gap: 6px; margin-bottom: 10px; width: 100%; }
-    .tab-btn { flex: 1; padding: 8px 4px; border: none; border-radius: 8px; background: #e4e6eb; font-weight: 600; font-size: 0.8rem; color: #4b4f56; cursor: pointer; text-align: center; white-space: nowrap; }
-    .tab-btn.active { background: #2374e1; color: white; }
-
-    .card { background: white; padding: 12px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); margin-bottom: 12px; width: 100%; }
-    .card-title { font-size: 1rem; font-weight: bold; color: #184173; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-
-    .form-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-    .form-group { display: flex; flex-direction: column; gap: 4px; width: 100%; }
-    label { font-size: 0.8rem; font-weight: bold; color: #4b4f56; }
-    input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #ccd0d5; border-radius: 6px; font-size: 0.85rem; outline: none; }
-    input:focus, select:focus, textarea:focus { border-color: #2374e1; }
-
-    .file-inputs { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-    .file-inputs input[type="file"] { width: 100%; font-size: 0.75rem; }
-
-    .btn-main { width: 100%; background: #2374e1; color: white; padding: 11px; border: none; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 6px; }
-    .btn-main:hover { background: #1b64c6; }
-
-    .item-card { border-left: 4px solid #2374e1; background: #f8f9fa; border-radius: 8px; padding: 10px; margin-bottom: 10px; border-top: 1px solid #eee; border-right: 1px solid #eee; border-bottom: 1px solid #eee; width: 100%; word-break: break-word; }
-    .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 6px; }
-    .item-title { font-size: 0.95rem; font-weight: bold; color: #184173; word-break: break-word; }
-    .badge { padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; background: #e4e6eb; color: #4b4f56; flex-shrink: 0; }
-    .badge.u-radu { background: #e7f3ff; color: #1877f2; }
-    .badge.dopuna { background: #fff8e1; color: #f57f17; }
-    .badge.cekanje { background: #f3e5f5; color: #7b1fa2; }
-    .badge.odbacen { background: #ffebee; color: #c62828; }
-    .badge.usaglasavanje { background: #e0f2f1; color: #00695c; }
-    
-    .item-details { font-size: 0.8rem; color: #606770; line-height: 1.4; margin-bottom: 8px; word-break: break-word; }
-    .item-thumb { max-width: 100%; height: auto; max-height: 150px; object-fit: contain; border-radius: 6px; border: 1px solid #ccc; margin-top: 6px; display: block; }
-
-    .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
-    .btn-action { padding: 7px 4px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.75rem; color: white; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; }
-    .btn-edit { background: #e67e22; }
-    .btn-mail { background: #8e44ad; }
-    .btn-delete { background: #e74c3c; }
-
-    .search-input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; font-size: 0.85rem; }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Univerzalni Rokovnik Pro 2.0</title>
+<style>
+:root{--navy:#15395f;--blue:#256cbd;--bg:#f3f6fb;--text:#21324a;--muted:#66778c;--line:#e2e9f2;--white:#fff;--red:#c93d48;--amber:#b97716;--green:#17816d}*{box-sizing:border-box}body{margin:0;background:var(--bg);font:14px system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.app{min-height:100vh;display:grid;grid-template-columns:230px minmax(0,1fr)}aside{background:var(--navy);color:#fff;padding:26px 16px;display:flex;flex-direction:column;gap:28px}.brand{font-size:19px;font-weight:800;letter-spacing:.2px;padding:0 10px}.brand small{display:block;color:#aac7e7;font-size:11px;margin-top:5px;font-weight:500}.menu{display:grid;gap:7px}.menu button{border:0;background:transparent;color:#d4e4f4;text-align:left;border-radius:9px;padding:12px;font-weight:600}.menu button.active,.menu button:hover{background:#2c5a88;color:#fff}.sidebar-foot{margin-top:auto;color:#b9d0e7;font-size:12px;padding:10px}main{padding:24px;max-width:1500px;width:100%;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px}.top h1{font-size:24px;margin:0 0 5px}.sub{color:var(--muted);font-size:13px}.btn{border:0;border-radius:9px;padding:11px 16px;font-weight:700;background:var(--blue);color:white}.btn.secondary{background:#e9eff8;color:var(--navy)}.btn.danger{background:#fce8e9;color:#a92530}.btn.small{padding:7px 10px;font-size:12px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}.stat,.panel{background:white;border:1px solid var(--line);border-radius:14px;box-shadow:0 3px 12px #23395509}.stat{padding:18px}.stat strong{font-size:28px;display:block;margin:8px 0 3px}.stat span{color:var(--muted);font-size:12px}.stat.warn strong{color:var(--amber)}.stat.danger strong{color:var(--red)}.panel{padding:20px;margin-bottom:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.panel h2{margin:0;font-size:17px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.toolbar input{flex:2;min-width:180px}.toolbar select{flex:1;min-width:135px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #ccd8e6;border-radius:9px;background:#fff;color:var(--text);outline:none}input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px #256cbd20}label{display:block;font-size:12px;font-weight:700;color:#485d76;margin-bottom:6px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.wide{grid-column:1/-1}.section-title{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--navy);border-bottom:1px solid var(--line);padding:9px 0 6px}.list{display:grid;gap:10px}.record{border:1px solid var(--line);border-radius:11px;padding:15px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}.record h3{margin:0 0 5px;font-size:15px}.meta{font-size:12px;color:var(--muted);line-height:1.8;overflow-wrap:anywhere}.tag{display:inline-block;border-radius:999px;background:#e9f2ff;color:#235ca0;padding:4px 9px;font-size:11px;font-weight:700}.tag.late{background:#ffeaec;color:#aa2936}.tag.soon{background:#fff3d9;color:#98610a}.record-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:end}.empty{text-align:center;padding:40px 10px;color:var(--muted)}.hidden{display:none!important}.message{padding:12px 14px;border-radius:9px;margin-bottom:14px;background:#fff1d9;color:#825509}.message.error{background:#ffebec;color:#a82d39}.message.ok{background:#e3f5ec;color:#176c4c}.form-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:20px}.hint{font-size:12px;color:var(--muted);margin-top:5px}.attachment{max-width:170px;max-height:120px;object-fit:contain;border-radius:7px;border:1px solid var(--line);margin-top:8px}.section{display:none}.section.active{display:block}.bottom{display:none}.loading{opacity:.65}@media(max-width:900px){.app{grid-template-columns:1fr}aside{display:none}main{padding:14px 12px 82px}.stats{grid-template-columns:repeat(2,1fr)}.top h1{font-size:20px}.panel{padding:15px}.bottom{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--line);padding:7px 4px env(safe-area-inset-bottom);z-index:5}.bottom button{background:none;border:0;padding:9px 3px;color:#5a6f88;font-weight:700;font-size:12px}.bottom button.active{color:var(--blue)}}@media(max-width:520px){.grid{grid-template-columns:1fr}.record{grid-template-columns:1fr}.record-actions{justify-content:start}.top{align-items:start}.top .btn{font-size:12px;padding:10px}.stats{gap:8px}.stat{padding:13px}.stat strong{font-size:23px}}
+</style>
 </head>
 <body>
-
-<div class="container">
-  <div class="header-bar">
-    📋 Univerzalni Rokovnik Pro
-  </div>
-
-  <div class="nav-tabs">
-    <button class="tab-btn active">📁 Predmeti</button>
-    <button class="tab-btn" onclick="alert('Sekcija Rokovi stiže uskoro!')">📅 Rokovi</button>
-    <button class="tab-btn" onclick="alert('Sekcija Analitika stiže uskoro!')">📊 Analitika</button>
-  </div>
-
-  <div class="card">
-    <div class="card-title">➕ Unos Novog Predmeta</div>
-    <form id="predmetForm">
-      <input type="hidden" id="predmetId">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Vrsta predmeta *</label>
-          <select id="vrsta_predmeta" onchange="proveriCustomVrstu(this)">
-            <option value="Pravni">Pravni</option>
-            <option value="Sudski">Sudski</option>
-            <option value="Katastar">Katastar</option>
-            <option value="Uprava">Uprava</option>
-            <option value="CEOP">CEOP</option>
-            <option value="Građevinski">Građevinski</option>
-            <option value="Geometar">Geometar</option>
-            <option value="EPS">EPS</option>
-            <option value="Vodovod">Vodovod</option>
-            <option value="Ostalo">Ostalo</option>
-            <option value="__custom__">➕ Ukucaj novu vrstu...</option>
-          </select>
-          <input type="text" id="custom_vrsta" placeholder="Unesite vrstu predmeta..." style="display:none; margin-top:4px;">
-        </div>
-        <div class="form-group">
-          <label>Oznaka / Broj *</label>
-          <input type="text" id="interni_broj" placeholder="INT-2026-01">
-        </div>
-        <div class="form-group">
-          <label>Naziv predmeta *</label>
-          <input type="text" id="naziv_predmeta" placeholder="Unesite naziv" required>
-        </div>
-        <div class="form-group">
-          <label>Stranka / Investor</label>
-          <input type="text" id="investor" placeholder="Ime stranke">
-        </div>
-        <div class="form-group">
-          <label>Obrađivač</label>
-          <input type="text" id="obradivac" placeholder="Obrađivač">
-        </div>
-        <div class="form-group">
-          <label>Datum otvaranja *</label>
-          <input type="date" id="datum_prijema">
-        </div>
-        <div class="form-group">
-          <label>Krajnji rok</label>
-          <input type="date" id="rok_datum">
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="status">
-            <option value="U radu">U radu</option>
-            <option value="Dopuna">Dopuna</option>
-            <option value="Čekanje">Čekanje</option>
-            <option value="Odbačen">Odbačen</option>
-            <option value="Usaglašavanje">Usaglašavanje</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Potpisnik</label>
-          <input type="text" id="potpisnik" placeholder="Potpisnik">
-        </div>
-
-        <div class="form-group">
-          <label>CEOP broj</label>
-          <input type="text" id="ceop_broj" placeholder="CEOP-...">
-        </div>
-        <div class="form-group">
-          <label>ROP broj</label>
-          <input type="text" id="rop_broj" placeholder="ROP-...">
-        </div>
-        <div class="form-group">
-          <label>Opština</label>
-          <input type="text" id="opstina" placeholder="Opština">
-        </div>
-        <div class="form-group">
-          <label>Katastarska opština</label>
-          <input type="text" id="katastarska_opstina" placeholder="K.O.">
-        </div>
-        <div class="form-group">
-          <label>Broj parcele</label>
-          <input type="text" id="broj_parcele" placeholder="Broj parcele">
-        </div>
-        <div class="form-group">
-          <label>Nadležni organ</label>
-          <input type="text" id="nadlezni_organ" placeholder="Nadležni organ">
-        </div>
-
-        <div class="form-group">
-          <label>Napomene</label>
-          <textarea id="napomena" rows="2" placeholder="Napomena..."></textarea>
-        </div>
-        
-        <div class="form-group">
-          <div class="file-inputs">
-            <div>
-              <label>📷 Us slikaj kamerom</label>
-              <input type="file" id="cameraFile" accept="image/*" capture="environment">
-            </div>
-            <div>
-              <label>📁 Priloži dokument / galeriju</label>
-              <input type="file" id="galleryFile" accept="image/*">
-            </div>
-          </div>
-          <input type="hidden" id="slika_base64">
-        </div>
-      </div>
-
-      <button type="submit" class="btn-main">💾 Sačuvaj Predmet</button>
-    </form>
-  </div>
-
-  <div class="card">
-    <div class="card-title">📁 Registar Predmeta</div>
-    <input type="text" id="search" class="search-input" placeholder="Pretraži registar..." onkeyup="filtriraj()">
-    <div id="listaPredmeta"></div>
-  </div>
-</div>
-
+<div class="app"><aside><div class="brand">▣ ROKOVNIK PRO<small>Poslovni predmeti • verzija 2.0 UI</small></div><nav class="menu"><button data-view="dashboard" class="active">◫ Kontrolna tabla</button><button data-view="registry">▤ Registar predmeta</button><button data-view="deadlines">▦ Rokovi</button></nav><div class="sidebar-foot">Povezano sa postojećim API-jem<br>Render / PostgreSQL</div></aside>
+<main><header class="top"><div><h1 id="pageTitle">Kontrolna tabla</h1><div class="sub">Pregled predmeta i rokova</div></div><button class="btn" id="newBtn">＋ Novi predmet</button></header><div id="notice" class="hidden" role="status" aria-live="polite"></div>
+<section id="dashboard" class="section active"><div class="stats"><div class="stat"><span>Ukupno predmeta</span><strong id="total">—</strong></div><div class="stat"><span>Aktivni predmeti</span><strong id="activeCount">—</strong></div><div class="stat warn"><span>Rok do 3 dana</span><strong id="soonCount">—</strong></div><div class="stat danger"><span>Rok istekao</span><strong id="lateCount">—</strong></div></div><div class="panel"><div class="panel-head"><h2>Poslednji predmeti</h2><button class="btn secondary small" data-view="registry">Prikaži sve →</button></div><div id="recentList" class="list"></div></div></section>
+<section id="registry" class="section"><div class="panel"><div class="panel-head"><h2>Registar predmeta</h2><span class="sub" id="resultCount"></span></div><div class="toolbar"><input id="search" placeholder="Pretraži naziv, broj, stranku, ROP, parcelu..." aria-label="Pretraga"><select id="filterType" aria-label="Vrsta predmeta"><option value="">Sve vrste</option></select><select id="filterStatus" aria-label="Status"><option value="">Svi statusi</option></select></div><div id="registryList" class="list"></div></div></section>
+<section id="deadlines" class="section"><div class="panel"><h2>Rokovi predmeta</h2><p class="sub" style="margin:8px 0 18px">Prikaz rokova iz postojeće baze. Više rokova po postupku biće dodato u sledećoj fazi.</p><div id="deadlineList" class="list"></div></div></section>
+<section id="editor" class="section"><div class="panel"><div class="panel-head"><h2 id="formHeading">Novi predmet</h2><button type="button" class="btn secondary small" id="cancelTop">← Nazad</button></div><form id="predmetForm"><input type="hidden" id="predmetId"><div class="grid"><div class="section-title">Osnovni podaci</div><div><label for="vrsta_predmeta">Vrsta predmeta *</label><select id="vrsta_predmeta" required><option>Pravni</option><option>Sudski</option><option>Katastar</option><option>RGZ</option><option>Uprava</option><option>CEOP</option><option>Građevinski</option><option>Geometar</option><option>EPS</option><option>Vodovod</option><option>Ostalo</option><option value="__custom__">＋ Nova vrsta...</option></select></div><div id="customWrap" class="hidden"><label for="custom_vrsta">Nova vrsta *</label><input id="custom_vrsta" placeholder="Naziv nove vrste"></div><div><label for="interni_broj">Interna oznaka / broj *</label><input id="interni_broj" required></div><div class="wide"><label for="naziv_predmeta">Naziv predmeta *</label><input id="naziv_predmeta" required></div><div><label for="investor">Stranka / investitor</label><input id="investor"></div><div><label for="obradivac">Obrađivač</label><input id="obradivac"></div><div><label for="potpisnik">Potpisnik</label><input id="potpisnik"></div><div><label for="nadlezni_organ">Nadležni organ</label><input id="nadlezni_organ"></div><div><label for="datum_prijema">Datum prijema *</label><input type="date" id="datum_prijema" required></div><div><label for="rok_datum">Krajnji rok</label><input type="date" id="rok_datum"></div><div><label for="status">Status</label><select id="status"><option>U radu</option><option>Dopuna</option><option>Čekanje</option><option>Odbačen</option><option>Usaglašavanje</option></select><div class="hint">Novi statusi i istorija statusa zahtevaju proširenje servera.</div></div><div class="section-title" id="specialTitle">Lokacija i posebni podaci</div><div id="ceopFields" class="hidden wide"><div class="grid"><div><label for="ceop_broj">CEOP broj</label><input id="ceop_broj"></div><div><label for="rop_broj">ROP broj</label><input id="rop_broj"></div></div><p class="hint">Detaljne vrste CEOP postupaka i povezani postupci biće dodati nakon migracije baze.</p></div><div id="locationFields" class="wide"><div class="grid"><div><label for="opstina">Opština</label><input id="opstina"></div><div><label for="katastarska_opstina">Katastarska opština</label><input id="katastarska_opstina"></div><div><label for="broj_parcele">Broj parcele</label><input id="broj_parcele"></div></div></div><div id="rgzHint" class="wide hidden"><div class="message">RGZ obrazac trenutno koristi postojeća polja (nadležni organ, K.O. i parcela). Broj RGZ predmeta, vrsta upisa, list nepokretnosti i više parcela biće zasebna polja kada se nadogradi baza.</div></div><div class="section-title">Napomene i prilog</div><div class="wide"><label for="napomena">Napomena</label><textarea id="napomena" rows="4"></textarea></div><div><label for="cameraFile">📷 Fotografija kamerom</label><input type="file" id="cameraFile" accept="image/*" capture="environment"></div><div><label for="galleryFile">🖼 Fotografija iz galerije</label><input type="file" id="galleryFile" accept="image/*"></div><div class="wide"><div class="hint">Postojeći server čuva jednu sliku po predmetu. Nova slika zamenjuje staru; PDF i više priloga biće dostupni nakon nadogradnje servera.</div><div id="preview"></div></div></div><div class="form-actions"><button type="button" class="btn secondary" id="cancelBtn">Otkaži</button><button type="submit" class="btn" id="saveBtn">💾 Sačuvaj predmet</button></div></form></div></section>
+</main></div><nav class="bottom"><button data-view="dashboard" class="active">◫ Početna</button><button data-view="registry">▤ Predmeti</button><button data-view="deadlines">▦ Rokovi</button></nav>
 <script>
-  let SVI_PREDMETI = [];
-
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('datum_prijema').valueAsDate = new Date();
-    ucitajPredmete();
-  });
-
-  function proveriCustomVrstu(select) {
-    const customInput = document.getElementById('custom_vrsta');
-    if (select.value === '__custom__') {
-      customInput.style.display = 'block';
-      customInput.focus();
-    } else {
-      customInput.style.display = 'none';
-      customInput.value = '';
-    }
-  }
-
-  function obradiFajl(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        document.getElementById('slika_base64').value = evt.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  document.getElementById('cameraFile').addEventListener('change', obradiFajl);
-  document.getElementById('galleryFile').addEventListener('change', obradiFajl);
-
-  async function ucitajPredmete() {
-    try {
-      const res = await fetch('/api/predmeti');
-      SVI_PREDMETI = await res.json();
-      prikaziKartice(SVI_PREDMETI);
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  function dobiStatusKlasu(status) {
-    if (!status) return 'u-radu';
-    const s = status.toLowerCase();
-    if (s.includes('dopun')) return 'dopuna';
-    if (s.includes('čekan') || s.includes('cekan')) return 'cekanje';
-    if (s.includes('odbačen') || s.includes('odbacen')) return 'odbacen';
-    if (s.includes('usaglaš') || s.includes('usaglas')) return 'usaglasavanje';
-    return 'u-radu';
-  }
-
-  function prikaziKartice(podaci) {
-    const kontekst = document.getElementById('listaPredmeta');
-    kontekst.innerHTML = '';
-
-    if (podaci.length === 0) {
-      kontekst.innerHTML = '<p style="color:#777; text-align:center;">Nema unetih predmeta.</p>';
-      return;
-    }
-
-    podaci.forEach(p => {
-      const div = document.createElement('div');
-      div.className = 'item-card';
-      const statusClass = dobiStatusKlasu(p.status);
-      
-      div.innerHTML = `
-        <div class="item-header">
-          <div class="item-title">${p.naziv_predmeta || 'Bez naziva'}</div>
-          <span class="badge ${statusClass}">${p.status || 'U radu'}</span>
-        </div>
-        <div class="item-details">
-          <b>Oznaka:</b> ${p.interni_broj || '-'}<br>
-          <b>Vrsta:</b> ${p.vrsta_predmeta || '-'}<br>
-          <b>Stranka:</b> ${p.investor || '-'}<br>
-          <b>Obrađivač:</b> ${p.obradivac || '-'}<br>
-          <b>Datum:</b> ${p.datum_prijema || '-'} | <b>Rok:</b> ${p.rok_datum || '-'}
-          ${p.ceop_broj ? `<br><b>CEOP:</b> ${p.ceop_broj}` : ''}
-          ${p.rop_broj ? `<br><b>ROP:</b> ${p.rop_broj}` : ''}
-          ${p.opstina ? `<br><b>Opština:</b> ${p.opstina}` : ''}
-          ${p.katastarska_opstina ? `<br><b>K.O.:</b> ${p.katastarska_opstina}` : ''}
-          ${p.broj_parcele ? `<br><b>Parcela:</b> ${p.broj_parcele}` : ''}
-          ${p.nadlezni_organ ? `<br><b>Nadležni organ:</b> ${p.nadlezni_organ}` : ''}
-          ${p.napomena ? `<br><i>Napomena: ${p.napomena}</i>` : ''}
-        </div>
-        ${p.slika_base64 ? `<img src="${p.slika_base64}" class="item-thumb" onclick="window.open('${p.slika_base64}')">` : ''}
-        <div class="actions">
-          <button class="btn-action btn-edit" onclick="izmeni(${p.id})">Izmeni</button>
-          <a class="btn-action btn-mail" href="mailto:?subject=Predmet: ${encodeURIComponent(p.naziv_predmeta)}&body=Oznaka: ${encodeURIComponent(p.interni_broj)}">📧 Mail</a>
-          <button class="btn-action btn-delete" onclick="obrisi(${p.id})">🗑️ Obriši</button>
-        </div>
-      `;
-      kontekst.appendChild(div);
-    });
-  }
-
-  document.getElementById('predmetForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    let izabranaVrsta = document.getElementById('vrsta_predmeta').value;
-    if (izabranaVrsta === '__custom__') {
-      izabranaVrsta = document.getElementById('custom_vrsta').value.trim() || 'Ostalo';
-    }
-
-    const payload = {
-      id: document.getElementById('predmetId').value || null,
-      vrsta_predmeta: izabranaVrsta,
-      interni_broj: document.getElementById('interni_broj').value,
-      naziv_predmeta: document.getElementById('naziv_predmeta').value,
-      investor: document.getElementById('investor').value,
-      obradivac: document.getElementById('obradivac').value,
-      potpisnik: document.getElementById('potpisnik').value,
-      datum_prijema: document.getElementById('datum_prijema').value,
-      rok_datum: document.getElementById('rok_datum').value,
-      status: document.getElementById('status').value,
-      ceop_broj: document.getElementById('ceop_broj').value,
-      rop_broj: document.getElementById('rop_broj').value,
-      opstina: document.getElementById('opstina').value,
-      katastarska_opstina: document.getElementById('katastarska_opstina').value,
-      broj_parcele: document.getElementById('broj_parcele').value,
-      nadlezni_organ: document.getElementById('nadlezni_organ').value,
-      slika_base64: document.getElementById('slika_base64').value,
-      napomena: document.getElementById('napomena').value
-    };
-
-    try {
-      const res = await fetch('/api/predmeti', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.success) {
-        resetForma();
-        ucitajPredmete();
-      }
-    } catch (err) {
-      alert('Greška pri čuvanju');
-    }
-  });
-
-  function izmeni(id) {
-    const p = SVI_PREDMETI.find(item => item.id === id);
-    if (!p) return;
-    document.getElementById('predmetId').value = p.id;
-    
-    const vrstaSelect = document.getElementById('vrsta_predmeta');
-    const customInput = document.getElementById('custom_vrsta');
-    const postojecaOpcija = Array.from(vrstaSelect.options).find(o => o.value === p.vrsta_predmeta);
-    
-    if (postojecaOpcija) {
-      vrstaSelect.value = p.vrsta_predmeta;
-      customInput.style.display = 'none';
-      customInput.value = '';
-    } else {
-      vrstaSelect.value = '__custom__';
-      customInput.style.display = 'block';
-      customInput.value = p.vrsta_predmeta || '';
-    }
-
-    document.getElementById('interni_broj').value = p.interni_broj || '';
-    document.getElementById('naziv_predmeta').value = p.naziv_predmeta || '';
-    document.getElementById('investor').value = p.investor || '';
-    document.getElementById('obradivac').value = p.obradivac || '';
-    document.getElementById('potpisnik').value = p.potpisnik || '';
-    document.getElementById('datum_prijema').value = p.datum_prijema || '';
-    document.getElementById('rok_datum').value = p.rok_datum || '';
-    document.getElementById('status').value = p.status || 'U radu';
-    document.getElementById('ceop_broj').value = p.ceop_broj || '';
-    document.getElementById('rop_broj').value = p.rop_broj || '';
-    document.getElementById('opstina').value = p.opstina || '';
-    document.getElementById('katastarska_opstina').value = p.katastarska_opstina || '';
-    document.getElementById('broj_parcele').value = p.broj_parcele || '';
-    document.getElementById('nadlezni_organ').value = p.nadlezni_organ || '';
-    document.getElementById('slika_base64').value = p.slika_base64 || '';
-    document.getElementById('napomena').value = p.napomena || '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  async function obrisi(id) {
-    if (!confirm('Obriši ovaj predmet?')) return;
-    try {
-      const res = await fetch('/api/obrisi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
-      const data = await res.json();
-      if (data.success) ucitajPredmete();
-    } catch (err) {
-      alert('Greška pri brisanju');
-    }
-  }
-
-  function resetForma() {
-    document.getElementById('predmetForm').reset();
-    document.getElementById('predmetId').value = '';
-    document.getElementById('slika_base64').value = '';
-    document.getElementById('custom_vrsta').style.display = 'none';
-    document.getElementById('datum_prijema').valueAsDate = new Date();
-  }
-
-  function filtriraj() {
-    const q = document.getElementById('search').value.toLowerCase();
-    const filtrirano = SVI_PREDMETI.filter(p => 
-      (p.naziv_predmeta && p.naziv_predmeta.toLowerCase().includes(q)) ||
-      (p.investor && p.investor.toLowerCase().includes(q)) ||
-      (p.interni_broj && p.interni_broj.toLowerCase().includes(q)) ||
-      (p.obradivac && p.obradivac.toLowerCase().includes(q)) ||
-      (p.vrsta_predmeta && p.vrsta_predmeta.toLowerCase().includes(q)) ||
-      (p.status && p.status.toLowerCase().includes(q))
-    );
-    prikaziKartice(filtrirano);
-  }
+'use strict';
+let SVI_PREDMETI=[],lastView='registry',busy=false;const $=id=>document.getElementById(id);
+const fields=['interni_broj','naziv_predmeta','investor','obradivac','potpisnik','datum_prijema','rok_datum','status','ceop_broj','rop_broj','opstina','katastarska_opstina','broj_parcele','nadlezni_organ','napomena'];
+function notify(msg,kind='error'){const el=$('notice');el.className='message '+kind;el.textContent=msg;el.scrollIntoView({behavior:'smooth',block:'nearest'});}function clearNotice(){$('notice').className='hidden';$('notice').textContent='';}
+function show(view){clearNotice();document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active',x.id===view));document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===view));$('pageTitle').textContent=({dashboard:'Kontrolna tabla',registry:'Registar predmeta',deadlines:'Rokovi',editor:$('predmetId').value?'Izmena predmeta':'Novi predmet'})[view];if(view!=='editor')lastView=view;window.scrollTo({top:0,behavior:'smooth'});}
+function safeDate(v){if(!/^\d{4}-\d{2}-\d{2}$/.test(v||''))return null;const d=new Date(v+'T12:00:00');return Number.isNaN(d.getTime())?null:d;}
+function daysLeft(v){const d=safeDate(v);if(!d)return null;const now=new Date();now.setHours(12,0,0,0);return Math.round((d-now)/86400000);}
+function deadlineClass(p){const n=daysLeft(p.rok_datum);return n===null?'':n<0?'late':n<=3?'soon':'';}
+function isClosed(p){return /^(završeno|zavrseno|arhivirano|rešeno|reseno)$/i.test((p.status||'').trim());}
+function element(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=String(text);return el;}
+function makeRecord(p){const root=element('article','record');const info=element('div');info.appendChild(element('h3','',p.naziv_predmeta||'Bez naziva'));const meta=element('div','meta');const entries=[['Oznaka',p.interni_broj],['Vrsta',p.vrsta_predmeta],['Stranka',p.investor],['Obrađivač',p.obradivac],['Datum',p.datum_prijema],['Rok',p.rok_datum],['ROP',p.rop_broj],['Parcela',p.broj_parcele]];meta.textContent=entries.filter(([,v])=>v).map(([k,v])=>`${k}: ${v}`).join('  ·  ');info.appendChild(meta);const tag=element('span','tag '+(!isClosed(p)?deadlineClass(p):''),p.status||'U radu');tag.style.marginTop='9px';info.appendChild(tag);if(p.slika_base64&&/^data:image\/(png|jpeg|gif|webp);base64,/i.test(p.slika_base64)){const im=element('img','attachment');im.src=p.slika_base64;im.alt='Prilog uz predmet';info.appendChild(element('div')).appendChild(im);}const actions=element('div','record-actions');const edit=element('button','btn secondary small','Izmeni');edit.onclick=()=>editItem(p.id);const mail=element('button','btn secondary small','✉ E-mail');mail.onclick=()=>{const subject='Predmet: '+(p.naziv_predmeta||'');const body=`Oznaka: ${p.interni_broj||'-'}\nVrsta: ${p.vrsta_predmeta||'-'}\nStatus: ${p.status||'-'}\nRok: ${p.rok_datum||'-'}\nNapomena: ${p.napomena||'-'}`;window.location.href='mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);};const del=element('button','btn danger small','Obriši');del.onclick=()=>deleteItem(p.id);actions.append(edit,mail,del);root.append(info,actions);return root;}
+function fillList(id,items){const parent=$(id);parent.replaceChildren();if(!items.length){parent.appendChild(element('div','empty','Nema predmeta za prikaz.'));return;}items.forEach(p=>parent.appendChild(makeRecord(p)));}
+function render(){const active=SVI_PREDMETI.filter(p=>!isClosed(p));$('total').textContent=SVI_PREDMETI.length;$('activeCount').textContent=active.length;$('soonCount').textContent=active.filter(p=>{const n=daysLeft(p.rok_datum);return n!==null&&n>=0&&n<=3;}).length;$('lateCount').textContent=active.filter(p=>{const n=daysLeft(p.rok_datum);return n!==null&&n<0;}).length;fillList('recentList',SVI_PREDMETI.slice(0,5));const q=$('search').value.toLocaleLowerCase('sr');const type=$('filterType').value,status=$('filterStatus').value;const filtered=SVI_PREDMETI.filter(p=>(!type||p.vrsta_predmeta===type)&&(!status||p.status===status)&&(!q||['naziv_predmeta','interni_broj','investor','obradivac','vrsta_predmeta','status','rop_broj','ceop_broj','broj_parcele','katastarska_opstina','nadlezni_organ'].some(k=>String(p[k]||'').toLocaleLowerCase('sr').includes(q))));$('resultCount').textContent=filtered.length+' rezultata';fillList('registryList',filtered);fillList('deadlineList',active.filter(p=>safeDate(p.rok_datum)).sort((a,b)=>a.rok_datum.localeCompare(b.rok_datum)));}
+function populateFilters(){for(const [id,key] of [['filterType','vrsta_predmeta'],['filterStatus','status']]){const sel=$(id),old=sel.value;while(sel.options.length>1)sel.remove(1);[...new Set(SVI_PREDMETI.map(p=>p[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'sr')).forEach(v=>sel.add(new Option(v,v)));sel.value=old;}}
+async function load(){try{const res=await fetch('/api/predmeti',{credentials:'same-origin'});if(!res.ok)throw Error('HTTP '+res.status);const data=await res.json();if(!Array.isArray(data))throw Error('Neočekivan odgovor servera');SVI_PREDMETI=data;populateFilters();render();}catch(e){notify('Nije moguće učitati predmete: '+e.message);}}
+function today(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
+function dynamicFields(){$('customWrap').classList.toggle('hidden',$('vrsta_predmeta').value!=='__custom__');const t=$('vrsta_predmeta').value.toLowerCase();$('ceopFields').classList.toggle('hidden',t!=='ceop');$('rgzHint').classList.toggle('hidden',!['rgz','katastar'].includes(t));$('specialTitle').textContent=t==='ceop'?'CEOP i lokacija':(['rgz','katastar'].includes(t)?'RGZ / katastar':'Lokacija i posebni podaci');}
+function preview(){const box=$('preview');box.replaceChildren();const value=$('slika_base64')?.value||window.currentImage||'';if(/^data:image\/(png|jpeg|gif|webp);base64,/i.test(value)){const im=element('img','attachment');im.src=value;im.alt='Pregled fotografije';box.appendChild(im);}}
+function resetForm(){$('predmetForm').reset();$('predmetId').value='';$('datum_prijema').value=today();window.currentImage='';$('preview').replaceChildren();$('formHeading').textContent='Novi predmet';dynamicFields();}
+function openNew(){resetForm();show('editor');}
+function editItem(id){const p=SVI_PREDMETI.find(x=>String(x.id)===String(id));if(!p)return;resetForm();$('predmetId').value=p.id;const sel=$('vrsta_predmeta');if([...sel.options].some(o=>o.value===p.vrsta_predmeta))sel.value=p.vrsta_predmeta;else{sel.value='__custom__';$('custom_vrsta').value=p.vrsta_predmeta||'';}fields.forEach(k=>$(k).value=p[k]||'');window.currentImage=p.slika_base64||'';dynamicFields();preview();$('formHeading').textContent='Izmena predmeta';show('editor');}
+async function fileChanged(e){const f=e.target.files?.[0];if(!f)return;if(!['image/png','image/jpeg','image/webp','image/gif'].includes(f.type)){notify('Dozvoljene su samo PNG, JPEG, WEBP i GIF slike.');e.target.value='';return;}if(f.size>8*1024*1024){notify('Slika je prevelika. Izaberi fotografiju manju od 8 MB.');e.target.value='';return;}try{window.currentImage=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(f);});preview();}catch{notify('Neuspešno učitavanje fotografije.');}}
+async function save(e){e.preventDefault();if(busy)return;const kind=$('vrsta_predmeta').value;const vrsta=kind==='__custom__'?$('custom_vrsta').value.trim():kind;if(!vrsta){notify('Unesi vrstu predmeta.');return;}const payload={id:$('predmetId').value||null,vrsta_predmeta:vrsta,slika_base64:window.currentImage||''};fields.forEach(k=>payload[k]=$(k).value);busy=true;$('saveBtn').disabled=true;try{const res=await fetch('/api/predmeti',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(payload)});const data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Server nije potvrdio čuvanje');await load();show('registry');notify('Predmet je uspešno sačuvan.','ok');}catch(err){notify('Greška pri čuvanju: '+err.message);}finally{busy=false;$('saveBtn').disabled=false;}}
+async function deleteItem(id){if(!confirm('Da li sigurno želiš da obrišeš predmet? Ova radnja je trajna na postojećem serveru.'))return;try{const res=await fetch('/api/obrisi',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({id})});const data=await res.json();if(!res.ok||!data.success)throw Error(data.error||'Brisanje nije potvrđeno');await load();notify('Predmet je obrisan.','ok');}catch(err){notify('Greška pri brisanju: '+err.message);}}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));$('newBtn').onclick=openNew;$('cancelBtn').onclick=$('cancelTop').onclick=()=>show(lastView);$('vrsta_predmeta').onchange=dynamicFields;$('cameraFile').onchange=fileChanged;$('galleryFile').onchange=fileChanged;$('predmetForm').onsubmit=save;$('search').oninput=render;$('filterType').onchange=render;$('filterStatus').onchange=render;resetForm();load();
 </script>
-</body>
-</html>
+</body></html>
