@@ -3,7 +3,7 @@
 
 /*
   UNIVERZALNI ROKOVNIK PRO 2.0
-  FAZA 2 - DOSIJE I ISTORIJA IZMENA
+  FAZA 3 - DOSIJE, ISTORIJA I TOK POSTUPANJA
 
   Backend:
   Node.js / Express / PostgreSQL
@@ -18,6 +18,9 @@ const API = "/api";
 let token = sessionStorage.getItem("rokovnik_token") || "";
 let predmetiSvi = [];
 let trenutniDokumenti = [];
+let dosijeDokumenti = [];
+let dosijeAktivnosti = [];
+let aktivnostUObradi = false;
 let trenutniKorisnik = null;
 let aktivniDosijeId = null;
 let aktivniTabPreDosijea = "tab-registar";
@@ -251,6 +254,8 @@ function logout(showNotice = true) {
   trenutniKorisnik = null;
   predmetiSvi = [];
   trenutniDokumenti = [];
+  dosijeDokumenti = [];
+  dosijeAktivnosti = [];
   aktivniDosijeId = null;
 
   sessionStorage.removeItem("rokovnik_token");
@@ -847,11 +852,12 @@ async function openDosije(id) {
   }
 
   try {
-    const [predmet, dokumenti, istorija] =
+    const [predmet, dokumenti, istorija, aktivnosti] =
       await Promise.all([
         api(`/predmeti/${id}`),
         api(`/predmeti/${id}/prilozi`),
-        api(`/predmeti/${id}/istorija`)
+        api(`/predmeti/${id}/istorija`),
+        api(`/predmeti/${id}/aktivnosti`)
       ]);
 
     if (
@@ -860,10 +866,13 @@ async function openDosije(id) {
       return;
     }
 
+    dosijeDokumenti = Array.isArray(dokumenti) ? dokumenti : [];
+    dosijeAktivnosti = Array.isArray(aktivnosti) ? aktivnosti : [];
     renderDosije(
       predmet,
-      dokumenti,
-      istorija
+      dosijeDokumenti,
+      istorija,
+      dosijeAktivnosti
     );
   } catch (err) {
     if (container) {
@@ -876,7 +885,8 @@ async function openDosije(id) {
 function renderDosije(
   p,
   dokumenti = [],
-  istorija = []
+  istorija = [],
+  aktivnosti = []
 ) {
   const container = $("dosije-sadrzaj");
 
@@ -959,6 +969,17 @@ function renderDosije(
       <div class="dosije-napomena">
         ${escapeHTML(p.napomena || "Nema napomena.")}
       </div>
+    </section>
+
+    <section class="dosije-sekcija" id="tok-postupanja">
+      <div class="aktivnosti-heading">
+        <h3>📋 Tok postupanja (${aktivnosti.length})</h3>
+        <button type="button" class="btn btn-primary btn-small"
+          data-action="aktivnost-nova">+ Dodaj aktivnost</button>
+      </div>
+      <p class="hint">Službene beleške, razgovori, sastanci, dopisi i sledeći koraci.</p>
+      <div id="aktivnost-obrazac" class="hidden"></div>
+      <div id="aktivnosti-lista">${renderAktivnosti(aktivnosti)}</div>
     </section>
 
     <section class="dosije-sekcija">
@@ -1082,7 +1103,10 @@ function historyActionName(action) {
     IZMENA: "Izmena podataka",
     BRISANJE: "Brisanje predmeta",
     DODAT_DOKUMENT: "Dodat dokument",
-    OBRISAN_DOKUMENT: "Obrisan dokument"
+    OBRISAN_DOKUMENT: "Obrisan dokument",
+    DODATA_AKTIVNOST: "Dodata službena aktivnost",
+    IZMENA_AKTIVNOSTI: "Izmena službene aktivnosti",
+    BRISANJE_AKTIVNOSTI: "Brisanje službene aktivnosti"
   };
 
   return names[action] || action;
@@ -1094,7 +1118,10 @@ function historyIcon(action) {
     IZMENA: "✏️",
     BRISANJE: "🗑",
     DODAT_DOKUMENT: "📎",
-    OBRISAN_DOKUMENT: "❌"
+    OBRISAN_DOKUMENT: "❌",
+    DODATA_AKTIVNOST: "📋",
+    IZMENA_AKTIVNOSTI: "✍️",
+    BRISANJE_AKTIVNOSTI: "🗑"
   };
 
   return icons[action] || "🕘";
@@ -1347,6 +1374,173 @@ function closeDosije() {
   switchTab(aktivniTabPreDosijea);
 }
 
+
+// ========================================
+// FAZA 3 - TOK POSTUPANJA
+// ========================================
+
+const vrsteAktivnosti = [
+  "Službena beleška", "Telefonski razgovor", "Sastanak",
+  "Dopis", "Postupanje", "Drugo"
+];
+
+function renderAktivnosti(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return '<p class="dosije-prazno">Nema evidentiranih aktivnosti.</p>';
+  }
+
+  return items.map(a => `
+    <article class="aktivnost-kartica">
+      <div class="aktivnost-vrh">
+        <strong>${escapeHTML(a.vrsta)}</strong>
+        <span>${escapeHTML(datum(a.datum_aktivnosti))}</span>
+      </div>
+      <p><b>Odgovorno lice:</b> ${escapeHTML(a.odgovorno_lice || "—")}</p>
+      <p class="aktivnost-opis">${escapeHTML(a.opis)}</p>
+      ${a.sledeci_korak ? `<p><b>Sledeći korak:</b> ${escapeHTML(a.sledeci_korak)}</p>` : ""}
+      ${a.rok_sledeceg_koraka ? `<p><b>Rok sledećeg koraka:</b> ${escapeHTML(datum(a.rok_sledeceg_koraka))}</p>` : ""}
+      <p class="aktivnost-meta">Uneo: ${escapeHTML(a.created_by_username || "—")} · ${escapeHTML(datumVreme(a.created_at))}</p>
+      <div class="actions">
+        <button type="button" class="btn btn-secondary btn-small"
+          data-action="aktivnost-izmeni" data-id="${escapeHTML(a.id)}">✏️ Izmeni</button>
+        <button type="button" class="btn btn-danger btn-small"
+          data-action="aktivnost-obrisi" data-id="${escapeHTML(a.id)}">🗑 Obriši</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+function prikaziObrazacAktivnosti(id = null) {
+  const container = $("aktivnost-obrazac");
+  if (!container || !aktivniDosijeId) return;
+  const a = id == null ? null : dosijeAktivnosti.find(
+    x => String(x.id) === String(id)
+  );
+  if (id != null && !a) {
+    message("Aktivnost nije pronađena.", true);
+    return;
+  }
+
+  container.classList.remove("hidden");
+  container.innerHTML = `
+    <form id="aktivnost-form" class="aktivnost-form">
+      <h4>${a ? "Izmena aktivnosti" : "Nova aktivnost"}</h4>
+      <div class="aktivnost-grid">
+        <label>Vrsta aktivnosti
+          <select name="vrsta" required>
+            ${vrsteAktivnosti.map(v => `<option value="${escapeHTML(v)}" ${v === (a?.vrsta || "Službena beleška") ? "selected" : ""}>${escapeHTML(v)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Datum aktivnosti
+          <input name="datum_aktivnosti" type="date" required
+            value="${escapeHTML(a?.datum_aktivnosti?.slice(0,10) || todayISO())}">
+        </label>
+        <label>Odgovorno lice
+          <input name="odgovorno_lice" maxlength="200"
+            value="${escapeHTML(a?.odgovorno_lice || "")}" placeholder="Ime i prezime">
+        </label>
+        <label>Rok sledećeg koraka
+          <input name="rok_sledeceg_koraka" type="date"
+            value="${escapeHTML(a?.rok_sledeceg_koraka?.slice(0,10) || "")}">
+        </label>
+      </div>
+      <label>Opis postupanja *
+        <textarea name="opis" required maxlength="10000" rows="5"
+          placeholder="Šta je urađeno, sa kim je razgovarano, koji je zaključak...">${escapeHTML(a?.opis || "")}</textarea>
+      </label>
+      <label>Sledeći korak
+        <textarea name="sledeci_korak" maxlength="5000" rows="3"
+          placeholder="Šta je potrebno preduzeti...">${escapeHTML(a?.sledeci_korak || "")}</textarea>
+      </label>
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" id="aktivnost-sacuvaj">
+          💾 ${a ? "Sačuvaj izmene" : "Sačuvaj aktivnost"}
+        </button>
+        <button type="button" class="btn btn-secondary"
+          data-action="aktivnost-otkazi">Otkaži</button>
+      </div>
+    </form>
+  `;
+  container.dataset.editId = a ? String(a.id) : "";
+  container.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function sacuvajAktivnost(event) {
+  event.preventDefault();
+  if (aktivnostUObradi || !aktivniDosijeId) return;
+  const form = event.target;
+  const container = $("aktivnost-obrazac");
+  const editId = container?.dataset.editId;
+  const predmetId = aktivniDosijeId;
+  const formData = new FormData(form);
+  const data = {};
+  for (const key of [
+    "vrsta", "datum_aktivnosti", "odgovorno_lice", "opis",
+    "sledeci_korak", "rok_sledeceg_koraka"
+  ]) {
+    data[key] = String(formData.get(key) || "").trim();
+  }
+  if (!data.opis || !data.datum_aktivnosti) {
+    message("Datum i opis aktivnosti su obavezni.", true);
+    return;
+  }
+
+  aktivnostUObradi = true;
+  const saveButton = $("aktivnost-sacuvaj");
+  if (saveButton) saveButton.disabled = true;
+  try {
+    await api(editId ? `/aktivnosti/${editId}` : `/predmeti/${predmetId}/aktivnosti`, {
+      method: editId ? "PUT" : "POST",
+      body: JSON.stringify(data)
+    });
+    await openDosije(predmetId);
+    message(editId ? "Aktivnost je izmenjena i evidentirana u istoriji." :
+      "Aktivnost je sačuvana i evidentirana u istoriji.");
+  } catch (err) {
+    message(err.message, true);
+  } finally {
+    aktivnostUObradi = false;
+    if (saveButton?.isConnected) saveButton.disabled = false;
+  }
+}
+
+async function obrisiAktivnost(id) {
+  if (!aktivniDosijeId) return;
+  const a = dosijeAktivnosti.find(x => String(x.id) === String(id));
+  if (!a) return;
+  if (!confirm(`Obrisati aktivnost "${a.vrsta}"?\nPrethodni sadržaj ostaje u istoriji.`)) return;
+  const predmetId = aktivniDosijeId;
+  try {
+    await api(`/aktivnosti/${id}`, { method: "DELETE" });
+    await openDosije(predmetId);
+    message("Aktivnost je obrisana. Zapis je sačuvan u istoriji.");
+  } catch (err) {
+    message(err.message, true);
+  }
+}
+
+function injectActivityStyles() {
+  if ($("aktivnosti-stil")) return;
+  const style = document.createElement("style");
+  style.id = "aktivnosti-stil";
+  style.textContent = `
+    .aktivnosti-heading, .aktivnost-vrh { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .aktivnost-kartica { padding:17px; margin:12px 0; border:1px solid #dce4ec; border-left:4px solid #1b887a; border-radius:10px; background:#f9fcfb; overflow-wrap:anywhere; }
+    .aktivnost-kartica p { margin:10px 0; }
+    .aktivnost-vrh strong { color:#163d46; }
+    .aktivnost-vrh span, .aktivnost-meta { color:#64748b; font-size:12px; }
+    .aktivnost-opis { white-space:pre-wrap; }
+    .aktivnost-form { padding:20px; margin:15px 0; border:1px solid #dce4ec; border-radius:12px; background:#f5f9fc; }
+    .aktivnost-form label { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; font-weight:600; }
+    .aktivnost-form input, .aktivnost-form select, .aktivnost-form textarea { width:100%; box-sizing:border-box; padding:11px; border:1px solid #bac8d5; border-radius:7px; font:inherit; background:white; color:#1b2d3e; }
+    .aktivnost-form textarea { resize:vertical; }
+    .aktivnost-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 14px; }
+    @media(max-width:650px) { .aktivnost-grid { grid-template-columns:1fr; } .aktivnost-form { padding:13px; } }
+    @media print { .aktivnosti-heading button, .aktivnost-kartica .actions, #aktivnost-obrazac { display:none!important; } }
+  `;
+  document.head.appendChild(style);
+}
+
 // ========================================
 // DOKUMENTI
 // ========================================
@@ -1541,7 +1735,7 @@ async function downloadDocument(id) {
     const blob = await response.blob();
     const url = URL.createObjectURL(blob);
 
-    const file = trenutniDokumenti.find(
+    const file = [...dosijeDokumenti, ...trenutniDokumenti].find(
       d => String(d.id) === String(id)
     );
 
@@ -1879,6 +2073,25 @@ async function handleAction(event) {
       await openDosije(id);
       break;
 
+    case "aktivnost-nova":
+      prikaziObrazacAktivnosti();
+      break;
+
+    case "aktivnost-izmeni":
+      prikaziObrazacAktivnosti(id);
+      break;
+
+    case "aktivnost-obrisi":
+      await obrisiAktivnost(id);
+      break;
+
+    case "aktivnost-otkazi":
+      if ($("aktivnost-obrazac")) {
+        $("aktivnost-obrazac").classList.add("hidden");
+        $("aktivnost-obrazac").innerHTML = "";
+      }
+      break;
+
     case "edit":
       editPredmet(id);
       break;
@@ -2024,6 +2237,12 @@ function initEvents() {
     "click",
     handleAction
   );
+
+  document.addEventListener("submit", event => {
+    if (event.target?.id === "aktivnost-form") {
+      sacuvajAktivnost(event);
+    }
+  });
 }
 
 // ========================================
@@ -2032,6 +2251,7 @@ function initEvents() {
 
 async function initApp() {
   injectHistoryStyles();
+  injectActivityStyles();
   initEvents();
   resetForm();
 
