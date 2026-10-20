@@ -3,21 +3,11 @@
 <html lang="sr">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <meta
-    name="theme-color"
-    content="#152b45"
-  >
-
-  <meta
-    name="description"
-    content="Univerzalni elektronski rokovnik za evidenciju predmeta, dokumenata i rokova."
-  >
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#152b45">
+  <meta name="description"
+        content="Univerzalni elektronski rokovnik za predmete, dokumentaciju i rokove.">
 
   <title>Univerzalni Rokovnik Pro 2.0</title>
 
@@ -484,6 +474,149 @@
       margin-top: 20px;
     }
 
+    /* KOMPLETAN DOSIJE PREDMETA */
+
+    #tab-dosije {
+      min-height: 75vh;
+    }
+
+    .dosije-toolbar {
+      margin-bottom: 15px;
+    }
+
+    .dosije-kartica {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+    }
+
+    .dosije-zaglavlje {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 22px;
+      margin-bottom: 25px;
+    }
+
+    .dosije-putanja {
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin: 0 0 9px;
+    }
+
+    .dosije-zaglavlje h2 {
+      font-size: 27px;
+      line-height: 1.3;
+      color: var(--navy);
+      margin: 0 0 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .dosije-zaglavlje p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .dosije-sekcija {
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: #fff;
+    }
+
+    .dosije-sekcija h3 {
+      margin: 0 0 18px;
+      color: var(--navy);
+      font-size: 17px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dosije-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+      gap: 17px 24px;
+    }
+
+    .dosije-polje {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .dosije-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .dosije-value {
+      color: var(--navy);
+      font-size: 14px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .dosije-napomena {
+      color: var(--text);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.8;
+    }
+
+    .dosije-dokument {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dosije-dokument:last-child {
+      border-bottom: none;
+    }
+
+    .dosije-dokument-info {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .dosije-dokument-info strong {
+      color: var(--navy);
+    }
+
+    .dosije-dokument-info span {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dosije-prazno {
+      color: var(--muted);
+      padding: 12px 0;
+    }
+
+    .dosije-komande {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-top: 1px solid var(--border);
+      padding-top: 22px;
+      margin-top: 24px;
+    }
+
     .footer {
       text-align: center;
       padding: 25px 12px;
@@ -522,7 +655,8 @@
       }
 
       .form-grid,
-      .predmeti-grid {
+      .predmeti-grid,
+      .dosije-grid {
         grid-template-columns: 1fr;
       }
 
@@ -571,6 +705,31 @@
         width: 100%;
         justify-content: space-between;
       }
+
+      .dosije-kartica {
+        padding: 14px;
+      }
+
+      .dosije-zaglavlje h2 {
+        font-size: 21px;
+      }
+
+      .dosije-sekcija {
+        padding: 15px;
+      }
+
+      .dosije-dokument {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .dosije-komande {
+        flex-direction: column;
+      }
+
+      .dosije-komande .btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -579,10 +738,7 @@
 
   <!-- PRIJAVA -->
 
-  <section
-    id="login-screen"
-    class="login-screen"
-  >
+  <section id="login-screen" class="login-screen">
     <div class="login-card">
 
       <div class="login-logo">📋</div>
@@ -705,7 +861,7 @@
           data-tab="tab-registar"
           type="button"
         >
-          📋 Registar
+          📋 Pregled predmeta
         </button>
 
         <button
@@ -1039,7 +1195,7 @@
 
             </div>
 
-            <!-- DOKUMENTI UZ NOVI PREDMET -->
+            <!-- DOKUMENTI UZ PREDMET -->
 
             <div class="upload-box">
 
@@ -1078,7 +1234,6 @@
                 <p class="hint">
                   PDF, JPG, PNG i WEBP.
                   Najviše 7 MB po dokumentu.
-                  Dokumenti se čuvaju u PostgreSQL bazi.
                 </p>
               </div>
 
@@ -1110,7 +1265,7 @@
 
       </section>
 
-      <!-- REGISTAR -->
+      <!-- PREGLED PREDMETA -->
 
       <section
         id="tab-registar"
@@ -1119,7 +1274,7 @@
 
         <div class="card">
 
-          <h2>📋 Registar predmeta</h2>
+          <h2>📋 Pregled predmeta</h2>
 
           <div class="toolbar">
 
@@ -1238,6 +1393,35 @@
           class="predmeti-grid"
         >
           Učitavanje predmeta...
+        </div>
+
+      </section>
+
+      <!-- NOVI EKRAN: DOSIJE PREDMETA -->
+
+      <section
+        id="tab-dosije"
+        class="tab-content hidden"
+      >
+
+        <div class="dosije-toolbar">
+
+          <button
+            id="dosije-nazad"
+            class="btn btn-secondary"
+            type="button"
+          >
+            ← Nazad na pregled predmeta
+          </button>
+
+        </div>
+
+        <div class="dosije-kartica">
+
+          <div id="dosije-sadrzaj">
+            Izaberi predmet iz registra.
+          </div>
+
         </div>
 
       </section>
@@ -1495,13 +1679,13 @@
     <footer class="footer">
       Univerzalni Rokovnik Pro 2.0
       · PostgreSQL
-      · Sigurna prijava
       · Višekorisnički rad
+      · Dosije predmeta
     </footer>
 
   </div>
 
-  <script src="/app.js?v=20261020-2"></script>
+  <script src="/app.js?v=20261020-faza1"></script>
 
 </body>
 </html>
