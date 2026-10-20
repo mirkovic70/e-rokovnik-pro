@@ -15,7 +15,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 if (!SECRET || SECRET.length < 32) {
-  throw new Error("SESSION_SECRET mora imati najmanje 32 karaktera.");
+  throw new Error(
+    "SESSION_SECRET mora imati najmanje 32 karaktera."
+  );
 }
 
 const pool = new Pool({
@@ -48,7 +50,29 @@ const columns = [
   "nadlezni_organ"
 ];
 
-const dateFields = new Set(["datum_prijema", "rok_datum"]);
+const labels = {
+  vrsta_predmeta: "Vrsta predmeta",
+  interni_broj: "Broj predmeta",
+  naziv_predmeta: "Naziv predmeta",
+  investor: "Stranka / investitor",
+  obradjivac: "Obrađivač",
+  potpisnik: "Potpisnik",
+  datum_prijema: "Datum prijema",
+  rok_datum: "Rok",
+  status: "Status",
+  napomena: "Napomena",
+  ceop_broj: "CEOP broj",
+  rop_broj: "ROP broj",
+  opstina: "Opština",
+  katastarska_opstina: "Katastarska opština",
+  broj_parcele: "Broj parcele",
+  nadlezni_organ: "Nadležni organ"
+};
+
+const dateFields = new Set([
+  "datum_prijema",
+  "rok_datum"
+]);
 
 const selectColumns = `
   p.id,
@@ -67,16 +91,24 @@ const selectColumns = `
 `;
 
 function fail(res, status, message) {
-  return res.status(status).json({ error: message });
+  return res.status(status).json({
+    error: message
+  });
 }
 
 function validId(value) {
   const n = Number(value);
-  return Number.isSafeInteger(n) && n > 0 ? n : null;
+  return Number.isSafeInteger(n) && n > 0
+    ? n
+    : null;
 }
 
 function normalize(body) {
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
+  if (
+    !body ||
+    typeof body !== "object" ||
+    Array.isArray(body)
+  ) {
     throw new Error("Neispravan zahtev.");
   }
 
@@ -96,61 +128,85 @@ function normalize(body) {
     if (dateFields.has(key)) {
       if (value) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          throw new Error("Neispravan datum: " + key);
+          throw new Error(
+            "Neispravan datum: " + key
+          );
         }
 
-        const date = new Date(value + "T00:00:00Z");
+        const date = new Date(
+          value + "T00:00:00Z"
+        );
 
         if (
           Number.isNaN(date.getTime()) ||
           date.toISOString().slice(0, 10) !== value
         ) {
-          throw new Error("Neispravan datum: " + key);
+          throw new Error(
+            "Neispravan datum: " + key
+          );
         }
       }
 
       result[key] = value || null;
     } else {
-      const limit = key === "napomena" ? 20000 : 500;
+      const limit =
+        key === "napomena" ? 20000 : 500;
 
       if (value.length > limit) {
-        throw new Error("Predugačko polje: " + key);
+        throw new Error(
+          "Predugačko polje: " + key
+        );
       }
 
       result[key] = value;
     }
   }
 
-  if (!result.interni_broj || !result.naziv_predmeta) {
-    throw new Error("Broj i naziv predmeta su obavezni.");
+  if (
+    !result.interni_broj ||
+    !result.naziv_predmeta
+  ) {
+    throw new Error(
+      "Broj i naziv predmeta su obavezni."
+    );
   }
 
   if (!result.datum_prijema) {
-    throw new Error("Datum prijema je obavezan.");
+    throw new Error(
+      "Datum prijema je obavezan."
+    );
   }
 
-  if (!result.status) result.status = "U radu";
+  if (!result.status) {
+    result.status = "U radu";
+  }
 
   return result;
 }
 
 function passwordHash(password, salt) {
-  return crypto.scryptSync(password, salt, 64).toString("hex");
+  return crypto
+    .scryptSync(password, salt, 64)
+    .toString("hex");
 }
 
 function safeEqual(a, b) {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
 
-  return x.length === y.length &&
-    crypto.timingSafeEqual(x, y);
+  return (
+    x.length === y.length &&
+    crypto.timingSafeEqual(x, y)
+  );
 }
 
 function createToken(user) {
-  const payload = Buffer.from(JSON.stringify({
-    id: user.id,
-    exp: Date.now() + 12 * 60 * 60 * 1000
-  })).toString("base64url");
+  const payload = Buffer.from(
+    JSON.stringify({
+      id: user.id,
+      exp: Date.now() + 12 * 60 * 60 * 1000
+    })
+  ).toString("base64url");
 
   const signature = crypto
     .createHmac("sha256", SECRET)
@@ -161,24 +217,37 @@ function createToken(user) {
 }
 
 function verifyToken(token) {
-  if (typeof token !== "string") return null;
+  if (typeof token !== "string") {
+    return null;
+  }
 
   const parts = token.split(".");
-  if (parts.length !== 2) return null;
+
+  if (parts.length !== 2) {
+    return null;
+  }
 
   const expected = crypto
     .createHmac("sha256", SECRET)
     .update(parts[0])
     .digest("base64url");
 
-  if (!safeEqual(parts[1], expected)) return null;
+  if (!safeEqual(parts[1], expected)) {
+    return null;
+  }
 
   try {
     const data = JSON.parse(
-      Buffer.from(parts[0], "base64url").toString()
+      Buffer.from(
+        parts[0],
+        "base64url"
+      ).toString()
     );
 
-    if (!validId(data.id) || data.exp <= Date.now()) {
+    if (
+      !validId(data.id) ||
+      data.exp <= Date.now()
+    ) {
       return null;
     }
 
@@ -198,16 +267,27 @@ function asyncRoute(fn) {
 
 async function auth(req, res, next) {
   try {
-    const header = req.get("authorization") || "";
+    const header =
+      req.get("authorization") || "";
 
     if (!header.startsWith("Bearer ")) {
-      return fail(res, 401, "Potrebna je prijava.");
+      return fail(
+        res,
+        401,
+        "Potrebna je prijava."
+      );
     }
 
-    const session = verifyToken(header.slice(7));
+    const session = verifyToken(
+      header.slice(7)
+    );
 
     if (!session) {
-      return fail(res, 401, "Sesija je istekla.");
+      return fail(
+        res,
+        401,
+        "Sesija je istekla."
+      );
     }
 
     const result = await pool.query(
@@ -218,7 +298,11 @@ async function auth(req, res, next) {
     );
 
     if (!result.rows.length) {
-      return fail(res, 401, "Korisnik ne postoji.");
+      return fail(
+        res,
+        401,
+        "Korisnik ne postoji."
+      );
     }
 
     req.user = result.rows[0];
@@ -227,6 +311,112 @@ async function auth(req, res, next) {
     next(err);
   }
 }
+
+// ============================================
+// TRANSAKCIJE I ISTORIJA
+// ============================================
+
+async function transaction(fn) {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const result = await fn(client);
+
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function addHistory(
+  client,
+  user,
+  predmetId,
+  action,
+  description,
+  changes = []
+) {
+  await client.query(
+    `INSERT INTO rokovnik_v2_istorija
+      (
+        predmet_id,
+        user_id,
+        username,
+        akcija,
+        opis,
+        promene
+      )
+     VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
+    [
+      predmetId,
+      user.id,
+      user.username,
+      action,
+      description,
+      JSON.stringify(changes)
+    ]
+  );
+}
+
+function calculateChanges(before, after) {
+  const changes = [];
+
+  for (const key of columns) {
+    const oldValue =
+      before[key] == null
+        ? ""
+        : String(before[key]);
+
+    const newValue =
+      after[key] == null
+        ? ""
+        : String(after[key]);
+
+    if (oldValue !== newValue) {
+      changes.push({
+        polje: key,
+        naziv_polja: labels[key],
+        stara_vrednost: oldValue,
+        nova_vrednost: newValue
+      });
+    }
+  }
+
+  return changes;
+}
+
+async function ownedCase(
+  client,
+  id,
+  userId,
+  lock = false
+) {
+  const result = await client.query(
+    `SELECT
+       ${columns.map(c =>
+         dateFields.has(c)
+           ? `${c}::text AS ${c}`
+           : c
+       ).join(", ")},
+       id
+     FROM rokovnik_v2_predmeti
+     WHERE id=$1 AND user_id=$2
+     ${lock ? "FOR UPDATE" : ""}`,
+    [id, userId]
+  );
+
+  return result.rows[0] || null;
+}
+
+// ============================================
+// INICIJALIZACIJA BAZE
+// ============================================
 
 async function init() {
   await pool.query(`
@@ -278,271 +468,608 @@ async function init() {
       REFERENCES rokovnik_v2_users(id);
   `);
 
+  // Nova tabela. Postojeće tabele se ne brišu.
+  // Namerno nema FK ka predmetu:
+  // zapis o brisanju mora ostati sačuvan.
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rokovnik_v2_istorija (
+      id BIGSERIAL PRIMARY KEY,
+      predmet_id BIGINT NOT NULL,
+      user_id BIGINT NOT NULL,
+      username TEXT NOT NULL,
+      akcija TEXT NOT NULL,
+      opis TEXT NOT NULL,
+      promene JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+
   await pool.query(`
     CREATE INDEX IF NOT EXISTS rokovnik_v2_user_idx
-    ON rokovnik_v2_predmeti(user_id);
+      ON rokovnik_v2_predmeti(user_id);
 
     CREATE INDEX IF NOT EXISTS rokovnik_v2_rok_idx
-    ON rokovnik_v2_predmeti(rok_datum);
+      ON rokovnik_v2_predmeti(rok_datum);
+
+    CREATE INDEX IF NOT EXISTS rokovnik_v2_istorija_idx
+      ON rokovnik_v2_istorija
+      (predmet_id, user_id, created_at DESC);
   `);
 
   const count = await pool.query(
-    "SELECT COUNT(*)::int AS broj FROM rokovnik_v2_users"
+    `SELECT COUNT(*)::int AS broj
+     FROM rokovnik_v2_users`
   );
 
   if (count.rows[0].broj === 0) {
-    const password = process.env.ADMIN_PASSWORD;
+    const password =
+      process.env.ADMIN_PASSWORD;
 
-    if (!password || password.length < 12) {
+    if (
+      !password ||
+      password.length < 12
+    ) {
       throw new Error(
         "Podesi ADMIN_PASSWORD od najmanje 12 karaktera."
       );
     }
 
-    const salt = crypto.randomBytes(24).toString("hex");
+    const salt = crypto
+      .randomBytes(24)
+      .toString("hex");
 
     await pool.query(
       `INSERT INTO rokovnik_v2_users
        (username, password_hash, password_salt)
        VALUES ($1,$2,$3)`,
-      ["admin", passwordHash(password, salt), salt]
+      [
+        "admin",
+        passwordHash(password, salt),
+        salt
+      ]
     );
   }
 
-  console.log("PostgreSQL Rokovnik Pro 2.0 je spreman.");
+  console.log(
+    "Rokovnik Pro 2.0 i istorija su spremni."
+  );
 }
 
-app.get("/api/health", asyncRoute(async (req, res) => {
-  await pool.query("SELECT 1");
-  res.json({ ok: true, app: "Rokovnik Pro 2.0" });
-}));
+// ============================================
+// OSNOVNI API
+// ============================================
 
-app.post("/api/login", asyncRoute(async (req, res) => {
-  const { username, password } = req.body || {};
+app.get(
+  "/api/health",
+  asyncRoute(async (req, res) => {
+    await pool.query("SELECT 1");
 
-  if (
-    typeof username !== "string" ||
-    typeof password !== "string" ||
-    username.length > 100 ||
-    password.length > 1000
-  ) {
-    return fail(res, 400, "Neispravni podaci.");
-  }
+    res.json({
+      ok: true,
+      app: "Rokovnik Pro 2.0",
+      istorija: true
+    });
+  })
+);
 
-  const result = await pool.query(
-    "SELECT * FROM rokovnik_v2_users WHERE username=$1",
-    [username.trim()]
-  );
+app.post(
+  "/api/login",
+  asyncRoute(async (req, res) => {
+    const { username, password } =
+      req.body || {};
 
-  const user = result.rows[0];
+    if (
+      typeof username !== "string" ||
+      typeof password !== "string" ||
+      username.length > 100 ||
+      password.length > 1000
+    ) {
+      return fail(
+        res,
+        400,
+        "Neispravni podaci."
+      );
+    }
 
-  if (
-    !user ||
-    !safeEqual(
-      passwordHash(password, user.password_salt),
-      user.password_hash
-    )
-  ) {
-    return fail(res, 401, "Pogrešno korisničko ime ili lozinka.");
-  }
+    const result = await pool.query(
+      `SELECT *
+       FROM rokovnik_v2_users
+       WHERE username=$1`,
+      [username.trim()]
+    );
 
-  res.json({
-    success: true,
-    token: createToken(user),
-    username: user.username
-  });
-}));
+    const user = result.rows[0];
+
+    if (
+      !user ||
+      !safeEqual(
+        passwordHash(
+          password,
+          user.password_salt
+        ),
+        user.password_hash
+      )
+    ) {
+      return fail(
+        res,
+        401,
+        "Pogrešno korisničko ime ili lozinka."
+      );
+    }
+
+    res.json({
+      success: true,
+      token: createToken(user),
+      username: user.username
+    });
+  })
+);
 
 app.get("/api/me", auth, (req, res) => {
   res.json({ user: req.user });
 });
 
-// REGISTRACIJA NOVOG KORISNIKA
-// Samo admin može da otvara naloge.
+// ============================================
+// KORISNICI
+// ============================================
 
-app.post("/api/users", auth, asyncRoute(async (req, res) => {
-  if (req.user.username !== "admin") {
-    return fail(res, 403, "Samo administrator dodaje korisnike.");
-  }
+app.post(
+  "/api/users",
+  auth,
+  asyncRoute(async (req, res) => {
+    if (req.user.username !== "admin") {
+      return fail(
+        res,
+        403,
+        "Samo administrator dodaje korisnike."
+      );
+    }
 
-  const { username, password } = req.body || {};
+    const { username, password } =
+      req.body || {};
 
-  if (
-    typeof username !== "string" ||
-    !/^[a-zA-Z0-9_.-]{3,50}$/.test(username)
-  ) {
-    return fail(res, 400, "Neispravno korisničko ime.");
-  }
+    if (
+      typeof username !== "string" ||
+      !/^[a-zA-Z0-9_.-]{3,50}$/.test(username)
+    ) {
+      return fail(
+        res,
+        400,
+        "Neispravno korisničko ime."
+      );
+    }
 
-  if (
-    typeof password !== "string" ||
-    password.length < 12 ||
-    password.length > 1000
-  ) {
-    return fail(res, 400, "Lozinka mora imati najmanje 12 karaktera.");
-  }
+    if (
+      typeof password !== "string" ||
+      password.length < 12 ||
+      password.length > 1000
+    ) {
+      return fail(
+        res,
+        400,
+        "Lozinka mora imati najmanje 12 karaktera."
+      );
+    }
 
-  const salt = crypto.randomBytes(24).toString("hex");
+    const salt = crypto
+      .randomBytes(24)
+      .toString("hex");
 
-  try {
+    try {
+      const result = await pool.query(
+        `INSERT INTO rokovnik_v2_users
+         (username, password_hash, password_salt)
+         VALUES ($1,$2,$3)
+         RETURNING id, username`,
+        [
+          username,
+          passwordHash(password, salt),
+          salt
+        ]
+      );
+
+      res.status(201).json({
+        success: true,
+        user: result.rows[0]
+      });
+    } catch (err) {
+      if (err.code === "23505") {
+        return fail(
+          res,
+          409,
+          "Korisničko ime već postoji."
+        );
+      }
+
+      throw err;
+    }
+  })
+);
+
+app.get(
+  "/api/users",
+  auth,
+  asyncRoute(async (req, res) => {
+    if (req.user.username !== "admin") {
+      return fail(
+        res,
+        403,
+        "Pristup nije dozvoljen."
+      );
+    }
+
     const result = await pool.query(
-      `INSERT INTO rokovnik_v2_users
-       (username, password_hash, password_salt)
-       VALUES ($1,$2,$3)
-       RETURNING id, username`,
-      [username, passwordHash(password, salt), salt]
+      `SELECT id, username, created_at
+       FROM rokovnik_v2_users
+       ORDER BY username`
+    );
+
+    res.json(result.rows);
+  })
+);
+
+// ============================================
+// PREDMETI
+// ============================================
+
+app.get(
+  "/api/predmeti",
+  auth,
+  asyncRoute(async (req, res) => {
+    const result = await pool.query(
+      `SELECT ${selectColumns}
+       FROM rokovnik_v2_predmeti p
+       WHERE p.user_id=$1
+       ORDER BY p.created_at DESC, p.id DESC`,
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  })
+);
+
+app.get(
+  "/api/predmeti/:id",
+  auth,
+  asyncRoute(async (req, res) => {
+    const id = validId(req.params.id);
+
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
+
+    const result = await pool.query(
+      `SELECT ${selectColumns}
+       FROM rokovnik_v2_predmeti p
+       WHERE p.id=$1 AND p.user_id=$2`,
+      [id, req.user.id]
+    );
+
+    if (!result.rows.length) {
+      return fail(
+        res,
+        404,
+        "Predmet nije pronađen."
+      );
+    }
+
+    res.json(result.rows[0]);
+  })
+);
+
+// ============================================
+// NOVI PREDMET + ISTORIJA
+// ============================================
+
+app.post(
+  "/api/predmeti",
+  auth,
+  asyncRoute(async (req, res) => {
+    let p;
+
+    try {
+      p = normalize(req.body);
+    } catch (err) {
+      return fail(
+        res,
+        400,
+        err.message
+      );
+    }
+
+    const id = await transaction(
+      async client => {
+        const values = [
+          ...columns.map(c => p[c]),
+          req.user.id
+        ];
+
+        const placeholders = values
+          .map((_, i) => "$" + (i + 1))
+          .join(",");
+
+        const result = await client.query(
+          `INSERT INTO rokovnik_v2_predmeti
+           (${columns.join(",")}, user_id)
+           VALUES (${placeholders})
+           RETURNING id`,
+          values
+        );
+
+        const predmetId = result.rows[0].id;
+
+        await addHistory(
+          client,
+          req.user,
+          predmetId,
+          "KREIRANJE",
+          "Kreiran je novi predmet.",
+          []
+        );
+
+        return predmetId;
+      }
     );
 
     res.status(201).json({
       success: true,
-      user: result.rows[0]
+      id
     });
-  } catch (err) {
-    if (err.code === "23505") {
-      return fail(res, 409, "Korisničko ime već postoji.");
+  })
+);
+
+// ============================================
+// IZMENA PREDMETA + ISTORIJA
+// ============================================
+
+app.put(
+  "/api/predmeti/:id",
+  auth,
+  asyncRoute(async (req, res) => {
+    const id = validId(req.params.id);
+
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
     }
-    throw err;
-  }
-}));
 
-app.get("/api/users", auth, asyncRoute(async (req, res) => {
-  if (req.user.username !== "admin") {
-    return fail(res, 403, "Pristup nije dozvoljen.");
-  }
+    let p;
 
-  const result = await pool.query(
-    `SELECT id, username, created_at
-     FROM rokovnik_v2_users
-     ORDER BY username`
-  );
+    try {
+      p = normalize(req.body);
+    } catch (err) {
+      return fail(
+        res,
+        400,
+        err.message
+      );
+    }
 
-  res.json(result.rows);
-}));
+    const result = await transaction(
+      async client => {
+        const before = await ownedCase(
+          client,
+          id,
+          req.user.id,
+          true
+        );
 
-// SAMO PREDMETI PRIJAVLJENOG KORISNIKA
+        if (!before) {
+          return null;
+        }
 
-app.get("/api/predmeti", auth, asyncRoute(async (req, res) => {
-  const result = await pool.query(
-    `SELECT ${selectColumns}
-     FROM rokovnik_v2_predmeti p
-     WHERE p.user_id=$1
-     ORDER BY p.created_at DESC, p.id DESC`,
-    [req.user.id]
-  );
+        const changes = calculateChanges(
+          before,
+          p
+        );
 
-  res.json(result.rows);
-}));
+        if (!changes.length) {
+          return {
+            changed: false
+          };
+        }
 
-app.get("/api/predmeti/:id", auth, asyncRoute(async (req, res) => {
-  const id = validId(req.params.id);
-  if (!id) return fail(res, 400, "Neispravan ID.");
+        const assignments = columns
+          .map((c, i) => `${c}=$${i + 1}`)
+          .join(",");
 
-  const result = await pool.query(
-    `SELECT ${selectColumns}
-     FROM rokovnik_v2_predmeti p
-     WHERE p.id=$1 AND p.user_id=$2`,
-    [id, req.user.id]
-  );
+        await client.query(
+          `UPDATE rokovnik_v2_predmeti
+           SET ${assignments},
+               updated_at=NOW()
+           WHERE id=$${columns.length + 1}
+             AND user_id=$${columns.length + 2}`,
+          [
+            ...columns.map(c => p[c]),
+            id,
+            req.user.id
+          ]
+        );
 
-  if (!result.rows.length) {
-    return fail(res, 404, "Predmet nije pronađen.");
-  }
+        const changedNames = changes
+          .map(c => c.naziv_polja)
+          .join(", ");
 
-  res.json(result.rows[0]);
-}));
+        await addHistory(
+          client,
+          req.user,
+          id,
+          "IZMENA",
+          "Izmenjena polja: " + changedNames,
+          changes
+        );
 
-app.post("/api/predmeti", auth, asyncRoute(async (req, res) => {
-  let p;
+        return {
+          changed: true,
+          changes: changes.length
+        };
+      }
+    );
 
-  try {
-    p = normalize(req.body);
-  } catch (err) {
-    return fail(res, 400, err.message);
-  }
+    if (!result) {
+      return fail(
+        res,
+        404,
+        "Predmet nije pronađen."
+      );
+    }
 
-  const values = [...columns.map(c => p[c]), req.user.id];
+    res.json({
+      success: true,
+      ...result
+    });
+  })
+);
 
-  const placeholders = values
-    .map((_, i) => "$" + (i + 1))
-    .join(",");
+// ============================================
+// BRISANJE PREDMETA + ISTORIJA
+// ============================================
 
-  const result = await pool.query(
-    `INSERT INTO rokovnik_v2_predmeti
-     (${columns.join(",")}, user_id)
-     VALUES (${placeholders})
-     RETURNING id`,
-    values
-  );
+app.delete(
+  "/api/predmeti/:id",
+  auth,
+  asyncRoute(async (req, res) => {
+    const id = validId(req.params.id);
 
-  res.status(201).json({
-    success: true,
-    id: result.rows[0].id
-  });
-}));
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
 
-app.put("/api/predmeti/:id", auth, asyncRoute(async (req, res) => {
-  const id = validId(req.params.id);
-  if (!id) return fail(res, 400, "Neispravan ID.");
+    const deleted = await transaction(
+      async client => {
+        const predmet = await ownedCase(
+          client,
+          id,
+          req.user.id,
+          true
+        );
 
-  let p;
+        if (!predmet) {
+          return false;
+        }
 
-  try {
-    p = normalize(req.body);
-  } catch (err) {
-    return fail(res, 400, err.message);
-  }
+        await addHistory(
+          client,
+          req.user,
+          id,
+          "BRISANJE",
+          `Obrisan predmet: ${predmet.interni_broj} — ${predmet.naziv_predmeta}`,
+          []
+        );
 
-  const assignments = columns
-    .map((c, i) => `${c}=$${i + 1}`)
-    .join(",");
+        await client.query(
+          `DELETE FROM rokovnik_v2_predmeti
+           WHERE id=$1 AND user_id=$2`,
+          [id, req.user.id]
+        );
 
-  const result = await pool.query(
-    `UPDATE rokovnik_v2_predmeti
-     SET ${assignments}, updated_at=NOW()
-     WHERE id=$${columns.length + 1}
-       AND user_id=$${columns.length + 2}
-     RETURNING id`,
-    [...columns.map(c => p[c]), id, req.user.id]
-  );
+        return true;
+      }
+    );
 
-  if (!result.rows.length) {
-    return fail(res, 404, "Predmet nije pronađen.");
-  }
+    if (!deleted) {
+      return fail(
+        res,
+        404,
+        "Predmet nije pronađen."
+      );
+    }
 
-  res.json({ success: true });
-}));
+    res.json({
+      success: true
+    });
+  })
+);
 
-app.delete("/api/predmeti/:id", auth, asyncRoute(async (req, res) => {
-  const id = validId(req.params.id);
-  if (!id) return fail(res, 400, "Neispravan ID.");
+// ============================================
+// NOVI API - ISTORIJA PREDMETA
+// ============================================
 
-  const result = await pool.query(
-    `DELETE FROM rokovnik_v2_predmeti
-     WHERE id=$1 AND user_id=$2
-     RETURNING id`,
-    [id, req.user.id]
-  );
+app.get(
+  "/api/predmeti/:id/istorija",
+  auth,
+  asyncRoute(async (req, res) => {
+    const id = validId(req.params.id);
 
-  if (!result.rows.length) {
-    return fail(res, 404, "Predmet nije pronađen.");
-  }
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
 
-  res.json({ success: true });
-}));
+    const exists = await pool.query(
+      `SELECT id
+       FROM rokovnik_v2_predmeti
+       WHERE id=$1 AND user_id=$2`,
+      [id, req.user.id]
+    );
 
-// DOKUMENTI
+    if (!exists.rows.length) {
+      return fail(
+        res,
+        404,
+        "Predmet nije pronađen."
+      );
+    }
+
+    const result = await pool.query(
+      `SELECT
+         id,
+         predmet_id,
+         username,
+         akcija,
+         opis,
+         promene,
+         created_at
+       FROM rokovnik_v2_istorija
+       WHERE predmet_id=$1 AND user_id=$2
+       ORDER BY created_at DESC, id DESC`,
+      [id, req.user.id]
+    );
+
+    res.json(result.rows);
+  })
+);
+
+// ============================================
+// LISTA DOKUMENATA
+// ============================================
 
 app.get(
   "/api/predmeti/:id/prilozi",
   auth,
   asyncRoute(async (req, res) => {
     const id = validId(req.params.id);
-    if (!id) return fail(res, 400, "Neispravan ID.");
+
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
 
     const result = await pool.query(
-      `SELECT d.id, d.naziv, d.mime_type,
-              octet_length(d.sadrzaj) AS velicina,
-              d.created_at
+      `SELECT
+         d.id,
+         d.naziv,
+         d.mime_type,
+         octet_length(d.sadrzaj) AS velicina,
+         d.created_at
        FROM rokovnik_v2_prilozi d
        JOIN rokovnik_v2_predmeti p
          ON p.id=d.predmet_id
@@ -555,14 +1082,29 @@ app.get(
   })
 );
 
+// ============================================
+// DODAVANJE DOKUMENTA + ISTORIJA
+// ============================================
+
 app.post(
   "/api/predmeti/:id/prilozi",
   auth,
   asyncRoute(async (req, res) => {
     const id = validId(req.params.id);
-    if (!id) return fail(res, 400, "Neispravan ID.");
 
-    const { naziv, mime_type, data_base64 } = req.body || {};
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
+
+    const {
+      naziv,
+      mime_type,
+      data_base64
+    } = req.body || {};
 
     if (
       typeof naziv !== "string" ||
@@ -571,7 +1113,11 @@ app.post(
       typeof mime_type !== "string" ||
       typeof data_base64 !== "string"
     ) {
-      return fail(res, 400, "Neispravan dokument.");
+      return fail(
+        res,
+        400,
+        "Neispravan dokument."
+      );
     }
 
     const allowed = [
@@ -582,25 +1128,48 @@ app.post(
     ];
 
     if (!allowed.includes(mime_type)) {
-      return fail(res, 400, "Dozvoljeni su PDF, JPG, PNG i WEBP.");
+      return fail(
+        res,
+        400,
+        "Dozvoljeni su PDF, JPG, PNG i WEBP."
+      );
     }
 
-    const raw = data_base64.replace(/^data:[^,]+,/, "");
+    const raw = data_base64.replace(
+      /^data:[^,]+,/,
+      ""
+    );
 
     if (
       !/^[A-Za-z0-9+/]*={0,2}$/.test(raw) ||
       raw.length % 4 === 1
     ) {
-      return fail(res, 400, "Neispravan format dokumenta.");
+      return fail(
+        res,
+        400,
+        "Neispravan format dokumenta."
+      );
     }
 
-    const bytes = Buffer.from(raw, "base64");
+    const bytes = Buffer.from(
+      raw,
+      "base64"
+    );
 
-    if (!bytes.length || bytes.length > 7 * 1024 * 1024) {
-      return fail(res, 400, "Dokument mora biti do 7 MB.");
+    if (
+      !bytes.length ||
+      bytes.length > 7 * 1024 * 1024
+    ) {
+      return fail(
+        res,
+        400,
+        "Dokument mora biti do 7 MB."
+      );
     }
 
-    const pdf = bytes.subarray(0, 5).toString() === "%PDF-";
+    const pdf =
+      bytes.subarray(0, 5).toString() ===
+      "%PDF-";
 
     const jpg =
       bytes.length >= 3 &&
@@ -608,13 +1177,20 @@ app.post(
       bytes[1] === 216 &&
       bytes[2] === 255;
 
-    const png = bytes.subarray(0, 8).equals(
-      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
-    );
+    const png = bytes
+      .subarray(0, 8)
+      .equals(
+        Buffer.from([
+          137, 80, 78, 71,
+          13, 10, 26, 10
+        ])
+      );
 
     const webp =
-      bytes.subarray(0, 4).toString() === "RIFF" &&
-      bytes.subarray(8, 12).toString() === "WEBP";
+      bytes.subarray(0, 4).toString() ===
+        "RIFF" &&
+      bytes.subarray(8, 12).toString() ===
+        "WEBP";
 
     const validType = {
       "application/pdf": pdf,
@@ -624,124 +1200,281 @@ app.post(
     };
 
     if (!validType[mime_type]) {
-      return fail(res, 400, "Sadržaj dokumenta nije ispravan.");
+      return fail(
+        res,
+        400,
+        "Sadržaj dokumenta nije ispravan."
+      );
     }
 
-    const exists = await pool.query(
-      `SELECT id FROM rokovnik_v2_predmeti
-       WHERE id=$1 AND user_id=$2`,
-      [id, req.user.id]
+    const result = await transaction(
+      async client => {
+        const predmet = await ownedCase(
+          client,
+          id,
+          req.user.id,
+          true
+        );
+
+        if (!predmet) {
+          return null;
+        }
+
+        const inserted = await client.query(
+          `INSERT INTO rokovnik_v2_prilozi
+           (
+             predmet_id,
+             naziv,
+             mime_type,
+             sadrzaj
+           )
+           VALUES ($1,$2,$3,$4)
+           RETURNING id`,
+          [
+            id,
+            naziv.trim(),
+            mime_type,
+            bytes
+          ]
+        );
+
+        await addHistory(
+          client,
+          req.user,
+          id,
+          "DODAT_DOKUMENT",
+          "Dodat dokument: " + naziv.trim(),
+          []
+        );
+
+        return inserted.rows[0].id;
+      }
     );
 
-    if (!exists.rows.length) {
-      return fail(res, 404, "Predmet nije pronađen.");
+    if (!result) {
+      return fail(
+        res,
+        404,
+        "Predmet nije pronađen."
+      );
     }
-
-    const result = await pool.query(
-      `INSERT INTO rokovnik_v2_prilozi
-       (predmet_id, naziv, mime_type, sadrzaj)
-       VALUES ($1,$2,$3,$4)
-       RETURNING id`,
-      [id, naziv.trim(), mime_type, bytes]
-    );
 
     res.status(201).json({
       success: true,
-      id: result.rows[0].id
+      id: result
     });
   })
 );
 
-app.get("/api/prilozi/:id", auth, asyncRoute(async (req, res) => {
-  const id = validId(req.params.id);
-  if (!id) return fail(res, 400, "Neispravan ID.");
+// ============================================
+// PREUZIMANJE DOKUMENTA
+// ============================================
 
-  const result = await pool.query(
-    `SELECT d.naziv, d.mime_type, d.sadrzaj
-     FROM rokovnik_v2_prilozi d
-     JOIN rokovnik_v2_predmeti p
-       ON p.id=d.predmet_id
-     WHERE d.id=$1 AND p.user_id=$2`,
-    [id, req.user.id]
-  );
+app.get(
+  "/api/prilozi/:id",
+  auth,
+  asyncRoute(async (req, res) => {
+    const id = validId(req.params.id);
 
-  if (!result.rows.length) {
-    return fail(res, 404, "Dokument nije pronađen.");
-  }
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
 
-  const file = result.rows[0];
+    const result = await pool.query(
+      `SELECT
+         d.naziv,
+         d.mime_type,
+         d.sadrzaj
+       FROM rokovnik_v2_prilozi d
+       JOIN rokovnik_v2_predmeti p
+         ON p.id=d.predmet_id
+       WHERE d.id=$1 AND p.user_id=$2`,
+      [id, req.user.id]
+    );
 
-  res.set("Content-Type", file.mime_type);
-  res.set(
-    "Content-Disposition",
-    `attachment; filename="prilog-${id}"`
-  );
-  res.set("X-Content-Type-Options", "nosniff");
-  res.send(file.sadrzaj);
-}));
+    if (!result.rows.length) {
+      return fail(
+        res,
+        404,
+        "Dokument nije pronađen."
+      );
+    }
 
-app.delete("/api/prilozi/:id", auth, asyncRoute(async (req, res) => {
-  const id = validId(req.params.id);
-  if (!id) return fail(res, 400, "Neispravan ID.");
+    const file = result.rows[0];
 
-  const result = await pool.query(
-    `DELETE FROM rokovnik_v2_prilozi d
-     USING rokovnik_v2_predmeti p
-     WHERE d.id=$1
-       AND d.predmet_id=p.id
-       AND p.user_id=$2
-     RETURNING d.id`,
-    [id, req.user.id]
-  );
+    res.set(
+      "Content-Type",
+      file.mime_type
+    );
 
-  if (!result.rows.length) {
-    return fail(res, 404, "Dokument nije pronađen.");
-  }
+    res.set(
+      "Content-Disposition",
+      `attachment; filename="prilog-${id}"`
+    );
 
-  res.json({ success: true });
-}));
+    res.set(
+      "X-Content-Type-Options",
+      "nosniff"
+    );
 
-// ANALITIKA SAMO ZA KORISNIKA
+    res.send(file.sadrzaj);
+  })
+);
 
-app.get("/api/analitika", auth, asyncRoute(async (req, res) => {
-  const result = await pool.query(
-    `SELECT
-       COUNT(*)::int AS ukupno,
-       COUNT(*) FILTER (
-         WHERE status='U radu'
-       )::int AS u_radu,
-       COUNT(*) FILTER (
-         WHERE rok_datum < CURRENT_DATE
-           AND status <> 'Završeno / Odobreno'
-       )::int AS isteklo,
-       COUNT(*) FILTER (
-         WHERE status='Završeno / Odobreno'
-       )::int AS zavrseno
-     FROM rokovnik_v2_predmeti
-     WHERE user_id=$1`,
-    [req.user.id]
-  );
+// ============================================
+// BRISANJE DOKUMENTA + ISTORIJA
+// ============================================
 
-  res.json(result.rows[0]);
-}));
+app.delete(
+  "/api/prilozi/:id",
+  auth,
+  asyncRoute(async (req, res) => {
+    const id = validId(req.params.id);
+
+    if (!id) {
+      return fail(
+        res,
+        400,
+        "Neispravan ID."
+      );
+    }
+
+    const deleted = await transaction(
+      async client => {
+        const result = await client.query(
+          `SELECT
+             d.id,
+             d.naziv,
+             d.predmet_id
+           FROM rokovnik_v2_prilozi d
+           JOIN rokovnik_v2_predmeti p
+             ON p.id=d.predmet_id
+           WHERE d.id=$1 AND p.user_id=$2
+           FOR UPDATE OF p, d`,
+          [id, req.user.id]
+        );
+
+        if (!result.rows.length) {
+          return false;
+        }
+
+        const file = result.rows[0];
+
+        await client.query(
+          `DELETE FROM rokovnik_v2_prilozi
+           WHERE id=$1`,
+          [id]
+        );
+
+        await addHistory(
+          client,
+          req.user,
+          file.predmet_id,
+          "OBRISAN_DOKUMENT",
+          "Obrisan dokument: " + file.naziv,
+          []
+        );
+
+        return true;
+      }
+    );
+
+    if (!deleted) {
+      return fail(
+        res,
+        404,
+        "Dokument nije pronađen."
+      );
+    }
+
+    res.json({
+      success: true
+    });
+  })
+);
+
+// ============================================
+// ANALITIKA
+// ============================================
+
+app.get(
+  "/api/analitika",
+  auth,
+  asyncRoute(async (req, res) => {
+    const result = await pool.query(
+      `SELECT
+         COUNT(*)::int AS ukupno,
+
+         COUNT(*) FILTER (
+           WHERE status='U radu'
+         )::int AS u_radu,
+
+         COUNT(*) FILTER (
+           WHERE rok_datum < CURRENT_DATE
+             AND status NOT IN (
+               'Završeno / Odobreno',
+               'Arhivirano'
+             )
+         )::int AS isteklo,
+
+         COUNT(*) FILTER (
+           WHERE status='Završeno / Odobreno'
+         )::int AS zavrseno
+
+       FROM rokovnik_v2_predmeti
+       WHERE user_id=$1`,
+      [req.user.id]
+    );
+
+    res.json(result.rows[0]);
+  })
+);
+
+// ============================================
+// OBRADA GRESAKA
+// ============================================
 
 app.use((err, req, res, next) => {
-  console.error("Server error:", err.message);
+  console.error(
+    "Server error:",
+    err.message
+  );
 
   if (!res.headersSent) {
-    fail(res, 500, "Greška na serveru.");
+    fail(
+      res,
+      500,
+      "Greška na serveru."
+    );
   }
 });
 
+// ============================================
+// POKRETANJE
+// ============================================
+
 init()
   .then(() => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(
-        "Univerzalni Rokovnik Pro 2.0 radi na portu " + PORT
-      );
-    });
+    app.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+        console.log(
+          "Univerzalni Rokovnik Pro 2.0 radi na portu " +
+          PORT
+        );
+      }
+    );
   })
   .catch(err => {
-    console.error("Pokretanje nije uspelo:", err.message);
+    console.error(
+      "Pokretanje nije uspelo:",
+      err.message
+    );
+
     process.exit(1);
   });
