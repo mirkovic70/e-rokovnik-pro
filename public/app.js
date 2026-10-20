@@ -2,13 +2,18 @@
 "use strict";
 
 /*
- * UNIVERZALNI ROKOVNIK PRO 2.0
- * FAZA 1 - KOMPLETAN DOSIJE PREDMETA
- *
- * PostgreSQL / Render
- * Vise korisnickih naloga
- * Privatni predmeti i dokumenti
- */
+  UNIVERZALNI ROKOVNIK PRO 2.0
+  FAZA 2 - DOSIJE I ISTORIJA IZMENA
+
+  Backend:
+  Node.js / Express / PostgreSQL
+
+  Frontend:
+  public/index.html
+  public/app.js
+*/
+
+const API = "/api";
 
 let token = sessionStorage.getItem("rokovnik_token") || "";
 let predmetiSvi = [];
@@ -16,10 +21,9 @@ let trenutniDokumenti = [];
 let trenutniKorisnik = null;
 let aktivniDosijeId = null;
 let aktivniTabPreDosijea = "tab-registar";
+let zauzet = false;
 
-const $ = id => document.getElementById(id);
-
-const POLJA = [
+const polja = [
   "vrsta_predmeta",
   "interni_broj",
   "naziv_predmeta",
@@ -38,30 +42,29 @@ const POLJA = [
   "nadlezni_organ"
 ];
 
-function danas() {
-  const d = new Date();
+const naziviPolja = {
+  vrsta_predmeta: "Vrsta predmeta",
+  interni_broj: "Broj predmeta",
+  naziv_predmeta: "Naziv predmeta",
+  investor: "Stranka / investitor",
+  obradjivac: "Obrađivač",
+  potpisnik: "Potpisnik",
+  datum_prijema: "Datum prijema",
+  rok_datum: "Rok za postupanje",
+  status: "Status",
+  napomena: "Napomena",
+  ceop_broj: "CEOP broj",
+  rop_broj: "ROP broj",
+  opstina: "Grad / opština",
+  katastarska_opstina: "Katastarska opština",
+  broj_parcele: "Broj parcele",
+  nadlezni_organ: "Nadležni organ"
+};
 
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, "0"),
-    String(d.getDate()).padStart(2, "0")
-  ].join("-");
-}
-
-function datumTekst(value) {
-  if (!value) return "Nije definisan";
-
-  const parts = String(value)
-    .slice(0, 10)
-    .split("-");
-
-  if (parts.length !== 3) return String(value);
-
-  return `${parts[2]}.${parts[1]}.${parts[0]}.`;
-}
+const $ = id => document.getElementById(id);
 
 function escapeHTML(value) {
-  return String(value == null ? "" : value)
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -69,86 +72,86 @@ function escapeHTML(value) {
     .replace(/'/g, "&#39;");
 }
 
-function formatSize(bytes) {
-  const n = Number(bytes) || 0;
+function datum(value) {
+  if (!value) return "—";
 
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) {
-    return `${(n / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
-}
-
-function brojDokumenata(p) {
-  return Number(
-    p.broj_dokumenata ?? p.broj_priloga ?? 0
-  );
-}
-
-function zavrsenPredmet(p) {
-  return [
-    "Završeno / Odobreno",
-    "Arhivirano"
-  ].includes(p.status);
-}
-
-function stanjeRoka(p) {
-  if (!p.rok_datum) {
-    return {
-      tekst: "Rok nije određen",
-      klasa: "neutral"
-    };
-  }
-
-  if (zavrsenPredmet(p)) {
-    return {
-      tekst: "Predmet je završen",
-      klasa: "success"
-    };
-  }
-
-  const rok = String(p.rok_datum).slice(0, 10);
-  const today = danas();
-
-  if (rok < today) {
-    return {
-      tekst: "Rok je istekao",
-      klasa: "danger"
-    };
-  }
-
-  if (rok === today) {
-    return {
-      tekst: "Rok ističe danas",
-      klasa: "warning"
-    };
-  }
-
-  const diff = Math.round(
-    (
-      Date.parse(rok + "T00:00:00Z") -
-      Date.parse(today + "T00:00:00Z")
-    ) / 86400000
+  const text = String(value).slice(0, 10);
+  const match = text.match(
+    /^(\d{4})-(\d{2})-(\d{2})$/
   );
 
-  return {
-    tekst: `Preostalo dana: ${diff}`,
-    klasa: diff <= 7 ? "warning" : "success"
-  };
+  if (match) {
+    return (
+      match[3] + "." +
+      match[2] + "." +
+      match[1] + "."
+    );
+  }
+
+  const d = new Date(value);
+
+  return Number.isNaN(d.getTime())
+    ? String(value)
+    : d.toLocaleDateString("sr-RS");
 }
 
-function showMessage(message, isError = false) {
+function datumVreme(value) {
+  if (!value) return "—";
+
+  const d = new Date(value);
+
+  if (Number.isNaN(d.getTime())) {
+    return String(value);
+  }
+
+  return d.toLocaleString("sr-RS", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+}
+
+function prikazVrednosti(value, key = "") {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return "—";
+  }
+
+  if (
+    key === "datum_prijema" ||
+    key === "rok_datum"
+  ) {
+    return datum(value);
+  }
+
+  return String(value);
+}
+
+function todayISO() {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(
+    now.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    now.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function message(text, error = false) {
   const el = $("app-message");
 
-  if (!el) {
-    alert(message);
-    return;
-  }
+  if (!el) return;
 
-  el.textContent = message;
+  el.textContent = text;
   el.classList.remove("hidden");
-  el.classList.toggle("error", isError);
+  el.classList.toggle("error", error);
 
   window.scrollTo({
     top: 0,
@@ -157,55 +160,12 @@ function showMessage(message, isError = false) {
 }
 
 function clearMessage() {
-  $("app-message")?.classList.add("hidden");
-}
+  const el = $("app-message");
 
-function loginError(message) {
-  const el = $("login-error");
-
-  if (!el) {
-    alert(message);
-    return;
+  if (el) {
+    el.classList.add("hidden");
+    el.textContent = "";
   }
-
-  el.textContent = message;
-  el.classList.remove("hidden");
-}
-
-function showLogin() {
-  $("login-screen")?.classList.remove("hidden");
-  $("app-screen")?.classList.add("hidden");
-}
-
-function showApp() {
-  $("login-screen")?.classList.add("hidden");
-  $("app-screen")?.classList.remove("hidden");
-
-  if ($("current-user")) {
-    $("current-user").textContent =
-      trenutniKorisnik?.username || "";
-  }
-
-  $("admin-tab")?.classList.toggle(
-    "hidden",
-    trenutniKorisnik?.username !== "admin"
-  );
-}
-
-function logout() {
-  token = "";
-  sessionStorage.removeItem("rokovnik_token");
-
-  predmetiSvi = [];
-  trenutniDokumenti = [];
-  trenutniKorisnik = null;
-  aktivniDosijeId = null;
-
-  if ($("password")) {
-    $("password").value = "";
-  }
-
-  showLogin();
 }
 
 async function api(url, options = {}) {
@@ -214,23 +174,23 @@ async function api(url, options = {}) {
   };
 
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.Authorization = "Bearer " + token;
   }
 
   if (
-    options.body &&
-    !(options.body instanceof FormData)
+    options.body !== undefined &&
+    !headers["Content-Type"]
   ) {
-    headers["Content-Type"] = "application/json";
+    headers["Content-Type"] =
+      "application/json";
   }
 
   let response;
 
   try {
-    response = await fetch(url, {
+    response = await fetch(API + url, {
       ...options,
-      headers,
-      cache: "no-store"
+      headers
     });
   } catch {
     throw new Error(
@@ -238,12 +198,8 @@ async function api(url, options = {}) {
     );
   }
 
-  if (
-    response.status === 401 &&
-    url !== "/api/login"
-  ) {
-    logout();
-
+  if (response.status === 401) {
+    logout(false);
     throw new Error(
       "Sesija je istekla. Prijavi se ponovo."
     );
@@ -263,1043 +219,205 @@ async function api(url, options = {}) {
   if (!response.ok) {
     throw new Error(
       data?.error ||
-      `Greška servera (${response.status})`
+      "Server je vratio grešku " +
+      response.status
     );
   }
 
   return data;
 }
 
-// ==================================================
-// PRIJAVA
-// ==================================================
+function showApp(user) {
+  trenutniKorisnik = user;
 
-async function login(e) {
-  e.preventDefault();
+  $("login-screen")?.classList.add("hidden");
+  $("app-screen")?.classList.remove("hidden");
 
-  $("login-error")?.classList.add("hidden");
+  if ($("current-user")) {
+    $("current-user").textContent =
+      user?.username || "";
+  }
 
-  const btn = $("login-form")?.querySelector(
-    'button[type="submit"]'
+  $("admin-tab")?.classList.toggle(
+    "hidden",
+    user?.username !== "admin"
   );
 
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Prijavljivanje...";
+  switchTab("tab-registar");
+}
+
+function logout(showNotice = true) {
+  token = "";
+  trenutniKorisnik = null;
+  predmetiSvi = [];
+  trenutniDokumenti = [];
+  aktivniDosijeId = null;
+
+  sessionStorage.removeItem("rokovnik_token");
+
+  $("app-screen")?.classList.add("hidden");
+  $("login-screen")?.classList.remove("hidden");
+
+  const error = $("login-error");
+
+  if (error) {
+    error.textContent = showNotice
+      ? ""
+      : "Prijavi se ponovo.";
+
+    error.classList.toggle(
+      "hidden",
+      showNotice
+    );
+  }
+}
+
+async function login(event) {
+  event.preventDefault();
+
+  const username = $("username")?.value.trim();
+  const password = $("password")?.value;
+
+  const error = $("login-error");
+
+  if (error) {
+    error.classList.add("hidden");
   }
 
   try {
-    const result = await api("/api/login", {
+    const result = await api("/login", {
       method: "POST",
       body: JSON.stringify({
-        username: $("username").value.trim(),
-        password: $("password").value
+        username,
+        password
       })
     });
 
-    if (!result.token) {
-      throw new Error(
-        "Server nije vratio podatke o prijavi."
-      );
-    }
-
     token = result.token;
-
     sessionStorage.setItem(
       "rokovnik_token",
       token
     );
 
-    trenutniKorisnik = {
-      username: result.username
-    };
+    const me = await api("/me");
 
-    $("password").value = "";
+    showApp(me.user);
 
-    showApp();
+    if ($("password")) {
+      $("password").value = "";
+    }
+
     await refreshAll();
-
   } catch (err) {
-    loginError(err.message);
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "🔐 Prijavi se";
+    if (error) {
+      error.textContent = err.message;
+      error.classList.remove("hidden");
     }
   }
 }
 
-// ==================================================
-// POKRETANJE APLIKACIJE
-// ==================================================
-
-document.addEventListener(
-  "DOMContentLoaded",
-  async () => {
-
-    $("login-form")?.addEventListener(
-      "submit",
-      login
-    );
-
-    $("logout-btn")?.addEventListener(
-      "click",
-      logout
-    );
-
-    $("predmet-form")?.addEventListener(
-      "submit",
-      savePredmet
-    );
-
-    $("cancel-btn")?.addEventListener(
-      "click",
-      resetForm
-    );
-
-    $("vrsta_predmeta")?.addEventListener(
-      "change",
-      showCeopFields
-    );
-
-    $("search")?.addEventListener(
-      "input",
-      renderPredmeti
-    );
-
-    $("filter-vrsta")?.addEventListener(
-      "change",
-      renderPredmeti
-    );
-
-    $("filter-status")?.addEventListener(
-      "change",
-      renderPredmeti
-    );
-
-    $("refresh-btn")?.addEventListener(
-      "click",
-      async () => {
-        try {
-          await refreshAll();
-          showMessage("Podaci su osveženi.");
-        } catch (err) {
-          showMessage(err.message, true);
-        }
-      }
-    );
-
-    $("excel-btn")?.addEventListener(
-      "click",
-      exportCSV
-    );
-
-    $("mail-btn")?.addEventListener(
-      "click",
-      sendSummaryMail
-    );
-
-    $("upload-btn")?.addEventListener(
-      "click",
-      uploadDocumentsFromTab
-    );
-
-    $("documents-refresh-btn")?.addEventListener(
-      "click",
-      loadDocuments
-    );
-
-    $("dokument-predmet")?.addEventListener(
-      "change",
-      loadDocuments
-    );
-
-    $("new-user-form")?.addEventListener(
-      "submit",
-      createUser
-    );
-
-    $("files-new")?.addEventListener(
-      "change",
-      updateFileCount
-    );
-
-    document.querySelectorAll(
-      ".tab-btn"
-    ).forEach(btn => {
-      btn.addEventListener("click", () => {
-        openTab(btn.dataset.tab, btn);
-      });
-    });
-
-    $("predmeti-lista")?.addEventListener(
-      "click",
-      async e => {
-        const btn = e.target.closest(
-          "button[data-action]"
-        );
-
-        if (!btn) return;
-
-        const id = Number(btn.dataset.id);
-        const action = btn.dataset.action;
-
-        if (action === "view") {
-          await openDosije(id);
-        }
-
-        if (action === "edit") {
-          editPredmet(id);
-        }
-
-        if (action === "delete") {
-          await deletePredmet(id);
-        }
-
-        if (action === "mail") {
-          sendPredmetMail(id);
-        }
-
-        if (action === "documents") {
-          await openDocumentsTab(id);
-        }
-      }
-    );
-
-    $("dokumenti-lista")?.addEventListener(
-      "click",
-      handleDocumentClick
-    );
-
-    $("dosije-sadrzaj")?.addEventListener(
-      "click",
-      handleDosijeClick
-    );
-
-    $("dosije-nazad")?.addEventListener(
-      "click",
-      closeDosije
-    );
-
-    if ($("datum_prijema")) {
-      $("datum_prijema").value = danas();
-    }
-
-    showCeopFields();
-
-    if (token) {
-      try {
-        const result = await api("/api/me");
-
-        trenutniKorisnik = result.user;
-
-        showApp();
-        await refreshAll();
-
-      } catch {
-        logout();
-      }
-    } else {
-      showLogin();
-    }
-  }
-);
-
-// ==================================================
-// NAVIGACIJA
-// ==================================================
-
-function openTab(tabId, btn) {
-  if (!tabId || !$(tabId)) return;
-
+function switchTab(id) {
   document.querySelectorAll(
     ".tab-content"
-  ).forEach(el => {
-    el.classList.add("hidden");
+  ).forEach(section => {
+    section.classList.toggle(
+      "hidden",
+      section.id !== id
+    );
   });
 
   document.querySelectorAll(
     ".tab-btn"
-  ).forEach(el => {
-    el.classList.remove("active");
+  ).forEach(button => {
+    button.classList.toggle(
+      "active",
+      button.dataset.tab === id
+    );
   });
 
-  $(tabId).classList.remove("hidden");
+  clearMessage();
 
-  btn?.classList.add("active");
-
-  if (tabId !== "tab-dosije") {
-    aktivniTabPreDosijea = tabId;
-  }
-
-  if (tabId === "tab-rokovi") {
+  if (id === "tab-rokovi") {
     renderCalendar();
   }
 
-  if (tabId === "tab-analitika") {
+  if (id === "tab-analitika") {
     renderAnalytics();
   }
 
-  if (tabId === "tab-dokumenti") {
-    populatePredmetSelect();
+  if (id === "tab-dokumenti") {
+    populateDocumentSelect();
   }
 
-  if (tabId === "tab-admin") {
+  if (id === "tab-admin") {
     loadUsers();
   }
 }
 
-function showCeopFields() {
-  const isCeop =
-    $("vrsta_predmeta")?.value ===
-    "CEOP i Građevinski postupak";
-
-  $("ceop-modul")?.classList.toggle(
-    "hidden",
-    !isCeop
-  );
-}
-
-// ==================================================
-// UCITAVANJE
-// ==================================================
-
 async function refreshAll() {
-  const result = await api("/api/predmeti");
+  try {
+    const result = await api("/predmeti");
 
-  if (!Array.isArray(result)) {
-    throw new Error(
-      "Server nije vratio ispravnu listu predmeta."
-    );
+    predmetiSvi = Array.isArray(result)
+      ? result
+      : [];
+
+    renderPredmeti();
+    populateDocumentSelect();
+    renderCalendar();
+    renderAnalytics();
+  } catch (err) {
+    message(err.message, true);
   }
-
-  predmetiSvi = result;
-
-  renderPredmeti();
-  renderCalendar();
-  renderAnalytics();
-  populatePredmetSelect();
 }
 
 function findPredmet(id) {
   return predmetiSvi.find(
-    p => Number(p.id) === Number(id)
+    p => String(p.id) === String(id)
   );
 }
 
-// ==================================================
-// UNOS I CUVANJE PREDMETA
-// ==================================================
+function getFormData() {
+  const data = {};
 
-function formData() {
-  const result = {};
+  for (const key of polja) {
+    data[key] = $(key)?.value ?? "";
+  }
 
-  POLJA.forEach(key => {
-    result[key] = $(key)?.value || "";
-  });
-
-  return result;
+  return data;
 }
 
-async function savePredmet(e) {
-  e.preventDefault();
-
-  const editId = $("edit-id")?.value || "";
-  const predmet = formData();
-
-  if (
-    !predmet.interni_broj.trim() ||
-    !predmet.naziv_predmeta.trim()
-  ) {
-    showMessage(
-      "Unesi broj i naziv predmeta.",
-      true
-    );
-    return;
-  }
-
-  const files = Array.from(
-    $("files-new")?.files || []
-  );
-
-  const btn = $("save-btn");
-
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Čuvanje...";
-  }
-
-  try {
-    let predmetId;
-
-    if (editId) {
-      await api(`/api/predmeti/${editId}`, {
-        method: "PUT",
-        body: JSON.stringify(predmet)
-      });
-
-      predmetId = editId;
-    } else {
-      const result = await api(
-        "/api/predmeti",
-        {
-          method: "POST",
-          body: JSON.stringify(predmet)
-        }
-      );
-
-      predmetId = result.id;
-    }
-
-    let uploaded = 0;
-    const errors = [];
-
-    for (const file of files) {
-      try {
-        await uploadSingleDocument(
-          predmetId,
-          file
-        );
-
-        uploaded++;
-      } catch (err) {
-        errors.push(
-          `${file.name}: ${err.message}`
-        );
-      }
-    }
-
-    resetForm();
-    await refreshAll();
-
-    showMessage(
-      errors.length
-        ? (
-          `Predmet je sačuvan. ` +
-          `Dodato dokumenata: ${uploaded}. ` +
-          `Greške: ${errors.join("; ")}`
-        )
-        : (
-          `Predmet je uspešno sačuvan. ` +
-          `Dodato dokumenata: ${uploaded}.`
-        ),
-      errors.length > 0
-    );
-
-  } catch (err) {
-    showMessage(
-      "Čuvanje nije uspelo: " +
-      err.message,
-      true
-    );
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = "💾 Sačuvaj predmet";
-    }
-  }
-}
-
-// ==================================================
-// REGISTAR PREDMETA
-// ==================================================
-
-function renderPredmeti() {
-  const el = $("predmeti-lista");
-  if (!el) return;
-
-  const q = (
-    $("search")?.value || ""
-  ).trim().toLowerCase();
-
-  const vrsta =
-    $("filter-vrsta")?.value || "";
-
-  const status =
-    $("filter-status")?.value || "";
-
-  const filtered = predmetiSvi.filter(p => {
-    const text = [
-      p.interni_broj,
-      p.naziv_predmeta,
-      p.investor,
-      p.obradjivac,
-      p.potpisnik,
-      p.ceop_broj,
-      p.rop_broj,
-      p.broj_parcele,
-      p.nadlezni_organ
-    ].join(" ").toLowerCase();
-
-    return (
-      text.includes(q) &&
-      (!vrsta || p.vrsta_predmeta === vrsta) &&
-      (!status || p.status === status)
-    );
-  });
-
-  if (!filtered.length) {
-    el.textContent = predmetiSvi.length
-      ? "Nema rezultata pretrage."
-      : "Nema unetih predmeta.";
-
-    return;
-  }
-
-  el.innerHTML = filtered.map(p => {
-    const id = Number(p.id);
-    const count = brojDokumenata(p);
-    const rok = stanjeRoka(p);
-
-    return `
-      <article class="predmet">
-
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          align-items:flex-start;
-          flex-wrap:wrap;
-          gap:10px;
-        ">
-          <h3>
-            ${escapeHTML(p.naziv_predmeta)}
-          </h3>
-
-          <span class="badge ${
-            rok.klasa === "danger"
-              ? "badge-danger"
-              : ""
-          }">
-            ${escapeHTML(p.status)}
-          </span>
-        </div>
-
-        <p>
-          <b>Broj:</b>
-          ${escapeHTML(p.interni_broj)}
-        </p>
-
-        <p>
-          <b>Vrsta:</b>
-          ${escapeHTML(p.vrsta_predmeta)}
-        </p>
-
-        <p>
-          <b>Stranka:</b>
-          ${escapeHTML(p.investor || "/")}
-        </p>
-
-        <p>
-          <b>Obrađivač:</b>
-          ${escapeHTML(p.obradjivac || "/")}
-        </p>
-
-        <p>
-          <b>Prijem:</b>
-          ${datumTekst(p.datum_prijema)}
-        </p>
-
-        <p>
-          <b>Rok:</b>
-          ${datumTekst(p.rok_datum)}
-        </p>
-
-        <p>
-          <b>📎 Dokumenti:</b>
-          <strong>${count}</strong>
-        </p>
-
-        <div class="actions">
-
-          <button
-            type="button"
-            class="btn btn-primary btn-small"
-            data-action="view"
-            data-id="${id}"
-          >
-            📂 Pregled
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-secondary btn-small"
-            data-action="edit"
-            data-id="${id}"
-          >
-            ✏️ Izmeni
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-secondary btn-small"
-            data-action="documents"
-            data-id="${id}"
-          >
-            📎 Dokumenti (${count})
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-secondary btn-small"
-            data-action="mail"
-            data-id="${id}"
-          >
-            ✉️ E-mail
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-danger btn-small"
-            data-action="delete"
-            data-id="${id}"
-          >
-            🗑️ Obriši
-          </button>
-
-        </div>
-
-      </article>
-    `;
-  }).join("");
-}
-
-// ==================================================
-// FAZA 1 - DOSIJE PREDMETA
-// ==================================================
-
-function dosijePolje(label, value) {
-  return `
-    <div class="dosije-polje">
-      <span class="dosije-label">
-        ${escapeHTML(label)}
-      </span>
-
-      <strong class="dosije-value">
-        ${escapeHTML(value || "Nije uneto")}
-      </strong>
-    </div>
-  `;
-}
-
-function dosijeSekcija(title, content) {
-  return `
-    <section class="dosije-sekcija">
-      <h3>${escapeHTML(title)}</h3>
-      <div class="dosije-grid">
-        ${content}
-      </div>
-    </section>
-  `;
-}
-
-function dosijeDokumentiHTML(files) {
-  if (!files.length) {
-    return `
-      <p class="dosije-prazno">
-        Uz ovaj predmet trenutno nema
-        priloženih dokumenata.
-      </p>
-    `;
-  }
-
-  return files.map(f => {
-    const id = Number(f.id);
-
-    return `
-      <div class="dosije-dokument">
-
-        <div class="dosije-dokument-info">
-          <strong>
-            📄 ${escapeHTML(f.naziv)}
-          </strong>
-
-          <span>
-            ${formatSize(f.velicina)}
-            ·
-            ${escapeHTML(f.mime_type)}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          class="btn btn-secondary btn-small"
-          data-dosije-action="download"
-          data-id="${id}"
-        >
-          ⬇️ Preuzmi
-        </button>
-
-      </div>
-    `;
-  }).join("");
-}
-
-function renderDosije(p, files) {
-  const el = $("dosije-sadrzaj");
-  if (!el) return;
-
-  const rok = stanjeRoka(p);
-  const id = Number(p.id);
-
-  const osnovni = [
-    dosijePolje(
-      "Broj predmeta",
-      p.interni_broj
-    ),
-    dosijePolje(
-      "Vrsta predmeta",
-      p.vrsta_predmeta
-    ),
-    dosijePolje(
-      "Stranka / investitor",
-      p.investor
-    ),
-    dosijePolje(
-      "Nadležni organ",
-      p.nadlezni_organ
-    ),
-    dosijePolje(
-      "Obrađivač",
-      p.obradjivac
-    ),
-    dosijePolje(
-      "Potpisnik",
-      p.potpisnik
-    )
-  ].join("");
-
-  const datumi = [
-    dosijePolje(
-      "Datum prijema",
-      datumTekst(p.datum_prijema)
-    ),
-    dosijePolje(
-      "Rok za postupanje",
-      datumTekst(p.rok_datum)
-    ),
-    dosijePolje(
-      "Status predmeta",
-      p.status
-    ),
-    dosijePolje(
-      "Stanje roka",
-      rok.tekst
-    )
-  ].join("");
-
-  const imaCeop = Boolean(
-    p.ceop_broj ||
-    p.rop_broj ||
-    p.opstina ||
-    p.katastarska_opstina ||
-    p.broj_parcele ||
-    p.vrsta_predmeta ===
-      "CEOP i Građevinski postupak"
-  );
-
-  const ceop = [
-    dosijePolje(
-      "CEOP broj",
-      p.ceop_broj
-    ),
-    dosijePolje(
-      "ROP broj",
-      p.rop_broj
-    ),
-    dosijePolje(
-      "Grad / opština",
-      p.opstina
-    ),
-    dosijePolje(
-      "Katastarska opština",
-      p.katastarska_opstina
-    ),
-    dosijePolje(
-      "Broj parcele",
-      p.broj_parcele
-    )
-  ].join("");
-
-  el.innerHTML = `
-    <div class="dosije-zaglavlje">
-
-      <div>
-        <p class="dosije-putanja">
-          ROKOVNIK PRO / DOSIJE PREDMETA
-        </p>
-
-        <h2>
-          ${escapeHTML(p.naziv_predmeta)}
-        </h2>
-
-        <p>
-          Predmet:
-          <strong>
-            ${escapeHTML(p.interni_broj)}
-          </strong>
-        </p>
-      </div>
-
-      <span class="badge ${
-        rok.klasa === "danger"
-          ? "badge-danger"
-          : ""
-      }">
-        ${escapeHTML(p.status)}
-      </span>
-
-    </div>
-
-    ${dosijeSekcija(
-      "Osnovni podaci",
-      osnovni
-    )}
-
-    ${dosijeSekcija(
-      "Datumi, status i rokovi",
-      datumi
-    )}
-
-    ${
-      imaCeop
-        ? dosijeSekcija(
-            "CEOP i podaci o lokaciji",
-            ceop
-          )
-        : ""
-    }
-
-    <section class="dosije-sekcija">
-
-      <h3>Napomene i tok postupka</h3>
-
-      <div class="dosije-napomena">
-        ${
-          p.napomena
-            ? escapeHTML(p.napomena)
-            : "Nema unetih napomena."
-        }
-      </div>
-
-    </section>
-
-    <section class="dosije-sekcija">
-
-      <div class="dosije-sekcija-header">
-        <h3>
-          📎 Dokumentacija
-          (${files.length})
-        </h3>
-      </div>
-
-      <div class="dosije-dokumenti">
-        ${dosijeDokumentiHTML(files)}
-      </div>
-
-    </section>
-
-    <div class="dosije-komande">
-
-      <button
-        type="button"
-        class="btn btn-secondary"
-        data-dosije-action="back"
-      >
-        ← Nazad na registar
-      </button>
-
-      <button
-        type="button"
-        class="btn btn-primary"
-        data-dosije-action="edit"
-        data-id="${id}"
-      >
-        ✏️ Izmeni predmet
-      </button>
-
-      <button
-        type="button"
-        class="btn btn-secondary"
-        data-dosije-action="documents"
-        data-id="${id}"
-      >
-        📎 Dokumenti
-      </button>
-
-      <button
-        type="button"
-        class="btn btn-secondary"
-        data-dosije-action="mail"
-        data-id="${id}"
-      >
-        ✉️ E-mail
-      </button>
-
-    </div>
-  `;
-}
-
-async function openDosije(id) {
-  const tab = $("tab-dosije");
-  const content = $("dosije-sadrzaj");
-
-  if (!tab || !content) {
-    showMessage(
-      "Potrebno je postaviti novi index.html " +
-      "sa ekranom dosijea predmeta.",
-      true
-    );
-    return;
-  }
-
-  aktivniDosijeId = id;
-
-  document.querySelectorAll(
-    ".tab-content"
-  ).forEach(el => {
-    el.classList.add("hidden");
-  });
-
-  document.querySelectorAll(
-    ".tab-btn"
-  ).forEach(el => {
-    el.classList.remove("active");
-  });
-
-  tab.classList.remove("hidden");
-
-  content.innerHTML = `
-    <div class="card">
-      Učitavanje dosijea predmeta...
-    </div>
-  `;
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
-
-  try {
-    const [p, files] = await Promise.all([
-      api(`/api/predmeti/${id}`),
-      api(`/api/predmeti/${id}/prilozi`)
-    ]);
-
-    if (aktivniDosijeId !== id) {
-      return;
-    }
-
-    trenutniDokumenti = files;
-
-    renderDosije(p, files);
-
-  } catch (err) {
-    content.innerHTML = `
-      <div class="card">
-        <p>
-          ${escapeHTML(err.message)}
-        </p>
-      </div>
-    `;
-  }
-}
-
-function closeDosije() {
-  aktivniDosijeId = null;
-
-  openTab(
-    "tab-registar",
-    document.querySelector(
-      '[data-tab="tab-registar"]'
-    )
-  );
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
-}
-
-async function handleDosijeClick(e) {
-  const btn = e.target.closest(
-    "button[data-dosije-action]"
-  );
-
-  if (!btn) return;
-
-  const action = btn.dataset.dosijeAction;
-  const id = Number(btn.dataset.id);
-
-  if (action === "back") {
-    closeDosije();
-  }
-
-  if (action === "edit") {
-    aktivniDosijeId = null;
-    editPredmet(id);
-  }
-
-  if (action === "documents") {
-    aktivniDosijeId = null;
-    await openDocumentsTab(id);
-  }
-
-  if (action === "mail") {
-    sendPredmetMail(id);
-  }
-
-  if (action === "download") {
-    await downloadDocument(id);
-  }
-}
-
-// ==================================================
-// IZMENA PREDMETA
-// ==================================================
-
-function editPredmet(id) {
-  const p = findPredmet(id);
-
-  if (!p) {
-    showMessage(
-      "Predmet nije pronađen.",
-      true
-    );
-    return;
-  }
-
-  if ($("edit-id")) {
-    $("edit-id").value = p.id;
-  }
-
-  POLJA.forEach(key => {
+function setFormData(predmet) {
+  for (const key of polja) {
     if ($(key)) {
-      $(key).value = p[key] || "";
+      $(key).value =
+        predmet[key] == null
+          ? ""
+          : String(predmet[key]).slice(
+              0,
+              key === "datum_prijema" ||
+              key === "rok_datum"
+                ? 10
+                : undefined
+            );
     }
-  });
-
-  showCeopFields();
-
-  if ($("form-title")) {
-    $("form-title").textContent =
-      "✏️ Izmena predmeta";
   }
 
-  $("cancel-btn")?.classList.remove(
-    "hidden"
+  updateCeop();
+}
+
+function updateCeop() {
+  const vrsta =
+    $("vrsta_predmeta")?.value || "";
+
+  const ceop = /CEOP|građevinsk/i.test(
+    vrsta
   );
 
-  openTab(
-    "tab-predmeti",
-    document.querySelector(
-      '[data-tab="tab-predmeti"]'
-    )
+  $("ceop-modul")?.classList.toggle(
+    "hidden",
+    !ceop
   );
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
 }
 
 function resetForm() {
@@ -1309,94 +427,78 @@ function resetForm() {
     $("edit-id").value = "";
   }
 
-  if ($("datum_prijema")) {
-    $("datum_prijema").value = danas();
-  }
-
   if ($("form-title")) {
     $("form-title").textContent =
       "➕ Novi predmet";
   }
 
-  $("cancel-btn")?.classList.add(
-    "hidden"
-  );
-
-  updateFileCount();
-  showCeopFields();
-}
-
-// ==================================================
-// BRISANJE PREDMETA
-// ==================================================
-
-async function deletePredmet(id) {
-  const p = findPredmet(id);
-  if (!p) return;
-
-  const confirmed = confirm(
-    `Trajno obrisati predmet ` +
-    `"${p.naziv_predmeta}" ` +
-    "i sve njegove dokumente?"
-  );
-
-  if (!confirmed) return;
-
-  try {
-    await api(`/api/predmeti/${id}`, {
-      method: "DELETE"
-    });
-
-    await refreshAll();
-
-    showMessage(
-      "Predmet je uspešno obrisan."
-    );
-
-  } catch (err) {
-    showMessage(err.message, true);
+  if ($("save-btn")) {
+    $("save-btn").textContent =
+      "💾 Sačuvaj predmet";
   }
-}
 
-// ==================================================
-// DOKUMENTACIJA
-// ==================================================
+  $("cancel-btn")?.classList.add("hidden");
 
-function updateFileCount() {
-  const count =
-    $("files-new")?.files?.length || 0;
+  if ($("datum_prijema")) {
+    $("datum_prijema").value = todayISO();
+  }
 
   if ($("files-count")) {
-    $("files-count").textContent = count
-      ? `Izabrano dokumenata: ${count}`
-      : "Nema izabranih dokumenata.";
+    $("files-count").textContent =
+      "Nema izabranih dokumenata.";
   }
+
+  updateCeop();
 }
 
-function fileToBase64(file) {
+function editPredmet(id) {
+  const predmet = findPredmet(id);
+
+  if (!predmet) {
+    message("Predmet nije pronađen.", true);
+    return;
+  }
+
+  setFormData(predmet);
+
+  $("edit-id").value = predmet.id;
+
+  $("form-title").textContent =
+    "✏️ Izmena predmeta";
+
+  $("save-btn").textContent =
+    "💾 Sačuvaj izmene";
+
+  $("cancel-btn")?.classList.remove("hidden");
+
+  switchTab("tab-predmeti");
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
     reader.onload = () => {
-      resolve(reader.result);
+      const value = String(reader.result);
+      resolve(value.split(",")[1] || "");
     };
 
     reader.onerror = () => {
-      reject(
-        new Error(
-          "Dokument ne može da se pročita."
-        )
-      );
+      reject(new Error(
+        "Neuspešno čitanje dokumenta."
+      ));
     };
 
     reader.readAsDataURL(file);
   });
 }
 
-async function uploadSingleDocument(
-  predmetId,
-  file
-) {
+function validateFile(file) {
   const allowed = [
     "application/pdf",
     "image/jpeg",
@@ -1410,222 +512,991 @@ async function uploadSingleDocument(
     );
   }
 
-  if (file.size > 7 * 1024 * 1024) {
+  if (
+    file.size === 0 ||
+    file.size > 7 * 1024 * 1024
+  ) {
     throw new Error(
-      "Dokument je veći od 7 MB."
+      "Dokument mora biti do 7 MB."
     );
   }
+}
 
-  const base64 = await fileToBase64(file);
+async function uploadFile(predmetId, file) {
+  validateFile(file);
+
+  const data = await fileToBase64(file);
 
   return api(
-    `/api/predmeti/${predmetId}/prilozi`,
+    `/predmeti/${predmetId}/prilozi`,
     {
       method: "POST",
       body: JSON.stringify({
         naziv: file.name,
         mime_type: file.type,
-        data_base64: base64
+        data_base64: data
       })
     }
   );
 }
 
-function populatePredmetSelect() {
-  const select = $("dokument-predmet");
-  if (!select) return;
+async function savePredmet(event) {
+  event.preventDefault();
 
-  const previous = select.value;
+  if (zauzet) return;
 
-  select.innerHTML = "";
-
-  const empty = document.createElement(
-    "option"
-  );
-
-  empty.value = "";
-  empty.textContent = "Izaberi predmet...";
-
-  select.appendChild(empty);
-
-  predmetiSvi.forEach(p => {
-    const option = document.createElement(
-      "option"
-    );
-
-    option.value = p.id;
-
-    option.textContent =
-      `${p.interni_broj} — ` +
-      p.naziv_predmeta;
-
-    select.appendChild(option);
-  });
+  const editId = $("edit-id")?.value;
+  const data = getFormData();
 
   if (
-    predmetiSvi.some(
-      p => String(p.id) === previous
-    )
+    !data.interni_broj.trim() ||
+    !data.naziv_predmeta.trim() ||
+    !data.datum_prijema
   ) {
-    select.value = previous;
-  }
-}
-
-async function openDocumentsTab(id) {
-  openTab(
-    "tab-dokumenti",
-    document.querySelector(
-      '[data-tab="tab-dokumenti"]'
-    )
-  );
-
-  const select = $("dokument-predmet");
-
-  if (select) {
-    select.value = String(id);
-  }
-
-  await loadDocuments();
-}
-
-async function loadDocuments() {
-  const predmetId =
-    $("dokument-predmet")?.value;
-
-  const el = $("dokumenti-lista");
-
-  if (!el) return;
-
-  if (!predmetId) {
-    trenutniDokumenti = [];
-    el.textContent = "Izaberi predmet.";
+    message(
+      "Popuni broj, naziv i datum prijema.",
+      true
+    );
     return;
   }
 
-  el.textContent =
-    "Učitavanje dokumenata...";
+  const files = Array.from(
+    $("files-new")?.files || []
+  );
 
   try {
-    const files = await api(
-      `/api/predmeti/${predmetId}/prilozi`
+    files.forEach(validateFile);
+  } catch (err) {
+    message(err.message, true);
+    return;
+  }
+
+  zauzet = true;
+
+  if ($("save-btn")) {
+    $("save-btn").disabled = true;
+  }
+
+  try {
+    const result = await api(
+      editId
+        ? `/predmeti/${editId}`
+        : "/predmeti",
+      {
+        method: editId ? "PUT" : "POST",
+        body: JSON.stringify(data)
+      }
     );
 
-    trenutniDokumenti = files;
+    const predmetId = editId || result.id;
 
-    if (!files.length) {
-      el.textContent =
-        "Nema priloženih dokumenata.";
-      return;
+    let uploaded = 0;
+    let failed = 0;
+
+    for (const file of files) {
+      try {
+        await uploadFile(predmetId, file);
+        uploaded++;
+      } catch (err) {
+        failed++;
+        console.error(
+          "Greška pri slanju dokumenta:",
+          err
+        );
+      }
     }
 
-    el.innerHTML = files.map(f => `
-      <div class="file-item">
+    await refreshAll();
+    resetForm();
+    switchTab("tab-registar");
 
-        <strong>
-          📄 ${escapeHTML(f.naziv)}
-        </strong>
+    if (failed) {
+      message(
+        `Predmet je sačuvan. Dokumenti: ${uploaded} uspešno, ${failed} neuspešno. Proveri dokumentaciju.`,
+        true
+      );
+    } else {
+      message(
+        editId
+          ? "Izmene su sačuvane i evidentirane u istoriji."
+          : "Predmet je uspešno kreiran."
+      );
+    }
+  } catch (err) {
+    message(err.message, true);
+  } finally {
+    zauzet = false;
+
+    if ($("save-btn")) {
+      $("save-btn").disabled = false;
+    }
+  }
+}
+
+async function deletePredmet(id) {
+  const p = findPredmet(id);
+
+  if (!p) return;
+
+  const confirmed = confirm(
+    `Trajno obrisati predmet "${p.naziv_predmeta}"?\n\nBiće obrisani i svi dokumenti. Ostaće samo zapis o brisanju u istoriji baze.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await api(
+      `/predmeti/${id}`,
+      { method: "DELETE" }
+    );
+
+    if (
+      String(aktivniDosijeId) === String(id)
+    ) {
+      aktivniDosijeId = null;
+    }
+
+    await refreshAll();
+    switchTab("tab-registar");
+
+    message("Predmet je obrisan.");
+  } catch (err) {
+    message(err.message, true);
+  }
+}
+
+// ========================================
+// PREGLED PREDMETA
+// ========================================
+
+function filteredPredmeti() {
+  const search = (
+    $("search")?.value || ""
+  ).trim().toLowerCase();
+
+  const vrsta =
+    $("filter-vrsta")?.value || "";
+
+  const status =
+    $("filter-status")?.value || "";
+
+  return predmetiSvi.filter(p => {
+    if (
+      vrsta &&
+      p.vrsta_predmeta !== vrsta
+    ) {
+      return false;
+    }
+
+    if (
+      status &&
+      p.status !== status
+    ) {
+      return false;
+    }
+
+    if (!search) return true;
+
+    return polja.some(key =>
+      String(p[key] ?? "")
+        .toLowerCase()
+        .includes(search)
+    );
+  });
+}
+
+function renderPredmeti() {
+  const container = $("predmeti-lista");
+
+  if (!container) return;
+
+  const items = filteredPredmeti();
+
+  if (!items.length) {
+    container.innerHTML = `
+      <div class="card">
+        Nema predmeta za prikaz.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = items.map(p => {
+    const expired =
+      p.rok_datum &&
+      p.rok_datum < todayISO() &&
+      ![
+        "Završeno / Odobreno",
+        "Arhivirano"
+      ].includes(p.status);
+
+    return `
+      <article class="predmet">
+        <h3>${escapeHTML(p.naziv_predmeta)}</h3>
 
         <p>
-          ${formatSize(f.velicina)}
-          ·
-          ${escapeHTML(f.mime_type)}
+          <b>Broj:</b>
+          ${escapeHTML(p.interni_broj)}
+        </p>
+
+        <p>
+          <b>Vrsta:</b>
+          ${escapeHTML(p.vrsta_predmeta || "—")}
+        </p>
+
+        <p>
+          <b>Stranka:</b>
+          ${escapeHTML(p.investor || "—")}
+        </p>
+
+        <p>
+          <b>Rok:</b>
+          ${escapeHTML(datum(p.rok_datum))}
+        </p>
+
+        <p>
+          <span class="badge ${expired ? "badge-danger" : ""}">
+            ${escapeHTML(p.status || "U radu")}
+          </span>
+          ${expired
+            ? '<span class="badge badge-danger">Istekao rok</span>'
+            : ""}
+        </p>
+
+        <p>
+          <b>Dokumenti:</b>
+          ${Number(p.broj_dokumenata) || 0}
         </p>
 
         <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary btn-small"
+            data-action="dosije"
+            data-id="${escapeHTML(p.id)}"
+          >
+            📂 Pregled / Dosije
+          </button>
 
           <button
             type="button"
             class="btn btn-secondary btn-small"
-            data-action="download"
-            data-id="${Number(f.id)}"
+            data-action="edit"
+            data-id="${escapeHTML(p.id)}"
           >
-            ⬇️ Preuzmi
+            ✏️ Izmeni
           </button>
 
           <button
             type="button"
             class="btn btn-danger btn-small"
             data-action="delete"
-            data-id="${Number(f.id)}"
+            data-id="${escapeHTML(p.id)}"
           >
-            🗑️ Obriši
+            🗑 Obriši
           </button>
-
         </div>
+      </article>
+    `;
+  }).join("");
+}
 
+// ========================================
+// DOSIJE PREDMETA
+// ========================================
+
+function dosijePolje(key, value) {
+  return `
+    <div class="dosije-polje">
+      <span class="dosije-label">
+        ${escapeHTML(naziviPolja[key] || key)}
+      </span>
+
+      <span class="dosije-value">
+        ${escapeHTML(prikazVrednosti(value, key))}
+      </span>
+    </div>
+  `;
+}
+
+function dosijeSekcija(title, keys, p) {
+  return `
+    <section class="dosije-sekcija">
+      <h3>${escapeHTML(title)}</h3>
+
+      <div class="dosije-grid">
+        ${keys.map(key =>
+          dosijePolje(key, p[key])
+        ).join("")}
+      </div>
+    </section>
+  `;
+}
+
+async function openDosije(id) {
+  aktivniDosijeId = id;
+  aktivniTabPreDosijea = "tab-registar";
+
+  switchTab("tab-dosije");
+
+  const container = $("dosije-sadrzaj");
+
+  if (container) {
+    container.innerHTML =
+      "<p>Učitavanje dosijea i istorije...</p>";
+  }
+
+  try {
+    const [predmet, dokumenti, istorija] =
+      await Promise.all([
+        api(`/predmeti/${id}`),
+        api(`/predmeti/${id}/prilozi`),
+        api(`/predmeti/${id}/istorija`)
+      ]);
+
+    if (
+      String(aktivniDosijeId) !== String(id)
+    ) {
+      return;
+    }
+
+    renderDosije(
+      predmet,
+      dokumenti,
+      istorija
+    );
+  } catch (err) {
+    if (container) {
+      container.textContent =
+        "Greška: " + err.message;
+    }
+  }
+}
+
+function renderDosije(
+  p,
+  dokumenti = [],
+  istorija = []
+) {
+  const container = $("dosije-sadrzaj");
+
+  if (!container) return;
+
+  const osnovna = [
+    "vrsta_predmeta",
+    "interni_broj",
+    "investor",
+    "nadlezni_organ",
+    "obradjivac",
+    "potpisnik"
+  ];
+
+  const rokovi = [
+    "datum_prijema",
+    "rok_datum",
+    "status"
+  ];
+
+  const ceop = [
+    "ceop_broj",
+    "rop_broj",
+    "opstina",
+    "katastarska_opstina",
+    "broj_parcele"
+  ];
+
+  const hasCeop = ceop.some(
+    key => p[key]
+  );
+
+  container.innerHTML = `
+    <div class="dosije-zaglavlje">
+      <div>
+        <p class="dosije-putanja">
+          ELEKTRONSKI DOSIJE PREDMETA
+        </p>
+
+        <h2>
+          ${escapeHTML(p.naziv_predmeta)}
+        </h2>
+
+        <p>
+          Broj:
+          <strong>
+            ${escapeHTML(p.interni_broj)}
+          </strong>
+        </p>
+      </div>
+
+      <span class="badge">
+        ${escapeHTML(p.status)}
+      </span>
+    </div>
+
+    ${dosijeSekcija(
+      "1. Osnovni podaci",
+      osnovna,
+      p
+    )}
+
+    ${dosijeSekcija(
+      "2. Status i rokovi",
+      rokovi,
+      p
+    )}
+
+    ${hasCeop
+      ? dosijeSekcija(
+          "3. CEOP i katastarski podaci",
+          ceop,
+          p
+        )
+      : ""}
+
+    <section class="dosije-sekcija">
+      <h3>📝 Napomene i tok postupka</h3>
+
+      <div class="dosije-napomena">
+        ${escapeHTML(p.napomena || "Nema napomena.")}
+      </div>
+    </section>
+
+    <section class="dosije-sekcija">
+      <h3>
+        📎 Dokumentacija
+        (${dokumenti.length})
+      </h3>
+
+      <div class="dosije-dokumenti">
+        ${renderDosijeDokumenti(dokumenti)}
+      </div>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn-secondary btn-small"
+          data-action="documents"
+          data-id="${escapeHTML(p.id)}"
+        >
+          + Dodaj dokument
+        </button>
+      </div>
+    </section>
+
+    <section class="dosije-sekcija">
+      <h3>
+        🕘 Istorija aktivnosti
+        (${istorija.length})
+      </h3>
+
+      <p class="hint">
+        Evidencija promena od aktiviranja
+        funkcije istorije.
+      </p>
+
+      <div class="dosije-istorija">
+        ${renderIstorija(istorija)}
+      </div>
+    </section>
+
+    <div class="dosije-komande">
+      <button
+        type="button"
+        class="btn btn-primary"
+        data-action="edit"
+        data-id="${escapeHTML(p.id)}"
+      >
+        ✏️ Izmeni predmet
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        data-action="mail"
+        data-id="${escapeHTML(p.id)}"
+      >
+        ✉️ Pošalji podatke
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-secondary"
+        data-action="print"
+      >
+        🖨 Štampaj dosije
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-danger"
+        data-action="delete"
+        data-id="${escapeHTML(p.id)}"
+      >
+        🗑 Obriši predmet
+      </button>
+    </div>
+  `;
+}
+
+function renderDosijeDokumenti(dokumenti) {
+  if (!dokumenti.length) {
+    return `
+      <p class="dosije-prazno">
+        Nema priloženih dokumenata.
+      </p>
+    `;
+  }
+
+  return dokumenti.map(d => `
+    <div class="dosije-dokument">
+      <div class="dosije-dokument-info">
+        <strong>
+          📄 ${escapeHTML(d.naziv)}
+        </strong>
+
+        <span>
+          ${escapeHTML(datumVreme(d.created_at))}
+          · ${formatBytes(d.velicina)}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-secondary btn-small"
+        data-action="download"
+        data-id="${escapeHTML(d.id)}"
+      >
+        Preuzmi
+      </button>
+    </div>
+  `).join("");
+}
+
+// ========================================
+// FAZA 2 - ISTORIJA IZMENA
+// ========================================
+
+function historyActionName(action) {
+  const names = {
+    KREIRANJE: "Kreiranje predmeta",
+    IZMENA: "Izmena podataka",
+    BRISANJE: "Brisanje predmeta",
+    DODAT_DOKUMENT: "Dodat dokument",
+    OBRISAN_DOKUMENT: "Obrisan dokument"
+  };
+
+  return names[action] || action;
+}
+
+function historyIcon(action) {
+  const icons = {
+    KREIRANJE: "➕",
+    IZMENA: "✏️",
+    BRISANJE: "🗑",
+    DODAT_DOKUMENT: "📎",
+    OBRISAN_DOKUMENT: "❌"
+  };
+
+  return icons[action] || "🕘";
+}
+
+function renderIstorija(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return `
+      <p class="dosije-prazno">
+        Još nema evidentiranih aktivnosti
+        za ovaj predmet.
+      </p>
+    `;
+  }
+
+  return items.map(item => {
+    const changes = Array.isArray(item.promene)
+      ? item.promene
+      : [];
+
+    const changesHTML = changes.map(change => `
+      <div class="istorija-promena">
+        <strong>
+          ${escapeHTML(
+            change.naziv_polja ||
+            naziviPolja[change.polje] ||
+            change.polje
+          )}
+        </strong>
+
+        <div class="istorija-vrednosti">
+          <div>
+            <small>Prethodno</small>
+            <div class="istorija-staro">
+              ${escapeHTML(
+                prikazVrednosti(
+                  change.stara_vrednost,
+                  change.polje
+                )
+              )}
+            </div>
+          </div>
+
+          <div>
+            <small>Novo</small>
+            <div class="istorija-novo">
+              ${escapeHTML(
+                prikazVrednosti(
+                  change.nova_vrednost,
+                  change.polje
+                )
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     `).join("");
 
+    return `
+      <article class="istorija-stavka">
+        <div class="istorija-vrh">
+          <strong>
+            ${historyIcon(item.akcija)}
+            ${escapeHTML(
+              historyActionName(item.akcija)
+            )}
+          </strong>
+
+          <span>
+            ${escapeHTML(
+              datumVreme(item.created_at)
+            )}
+          </span>
+        </div>
+
+        <div class="istorija-korisnik">
+          👤 ${escapeHTML(item.username)}
+        </div>
+
+        <p>
+          ${escapeHTML(item.opis)}
+        </p>
+
+        ${changes.length
+          ? `
+            <details class="istorija-detalji">
+              <summary>
+                Prikaži promene
+                (${changes.length})
+              </summary>
+
+              ${changesHTML}
+            </details>
+          `
+          : ""}
+      </article>
+    `;
+  }).join("");
+}
+
+function injectHistoryStyles() {
+  if ($("istorija-stil")) return;
+
+  const style = document.createElement("style");
+  style.id = "istorija-stil";
+
+  style.textContent = `
+    .istorija-stavka {
+      padding: 17px;
+      margin: 13px 0;
+      border: 1px solid #dce4ec;
+      border-left: 4px solid #2867a4;
+      border-radius: 10px;
+      background: #f9fbfd;
+      overflow-wrap: anywhere;
+    }
+
+    .istorija-vrh {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .istorija-vrh strong {
+      color: #152b45;
+      font-size: 14px;
+    }
+
+    .istorija-vrh span {
+      font-size: 12px;
+      color: #69798c;
+    }
+
+    .istorija-korisnik {
+      color: #2867a4;
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 7px;
+    }
+
+    .istorija-stavka p {
+      margin: 9px 0 0;
+      color: #34465b;
+    }
+
+    .istorija-detalji {
+      margin-top: 13px;
+      border-top: 1px solid #dce4ec;
+      padding-top: 12px;
+    }
+
+    .istorija-detalji summary {
+      color: #2867a4;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .istorija-promena {
+      border-bottom: 1px solid #e0e7ef;
+      padding: 13px 0;
+    }
+
+    .istorija-promena:last-child {
+      border-bottom: none;
+    }
+
+    .istorija-promena > strong {
+      display: block;
+      margin-bottom: 9px;
+      color: #152b45;
+    }
+
+    .istorija-vrednosti {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .istorija-vrednosti small {
+      color: #69798c;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .istorija-staro,
+    .istorija-novo {
+      padding: 10px;
+      border-radius: 7px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+
+    .istorija-staro {
+      background: #fff0f0;
+      color: #8b2929;
+    }
+
+    .istorija-novo {
+      background: #eaf7ee;
+      color: #176534;
+    }
+
+    @media (max-width: 600px) {
+      .istorija-vrednosti {
+        grid-template-columns: 1fr;
+      }
+
+      .istorija-stavka {
+        padding: 13px;
+      }
+    }
+
+    @media print {
+      .app-header,
+      .tabs,
+      .dosije-toolbar,
+      .dosije-komande,
+      .footer {
+        display: none !important;
+      }
+
+      body {
+        background: white;
+      }
+
+      .main {
+        max-width: none;
+        padding: 0;
+      }
+
+      .dosije-kartica {
+        border: none;
+        box-shadow: none;
+      }
+
+      .dosije-sekcija {
+        break-inside: avoid;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+function closeDosije() {
+  aktivniDosijeId = null;
+  switchTab(aktivniTabPreDosijea);
+}
+
+// ========================================
+// DOKUMENTI
+// ========================================
+
+function formatBytes(bytes) {
+  const size = Number(bytes) || 0;
+
+  if (size < 1024) {
+    return size + " B";
+  }
+
+  if (size < 1024 * 1024) {
+    return (size / 1024).toFixed(1) + " KB";
+  }
+
+  return (
+    size / (1024 * 1024)
+  ).toFixed(2) + " MB";
+}
+
+function populateDocumentSelect() {
+  const select = $("dokument-predmet");
+
+  if (!select) return;
+
+  const selected = select.value;
+
+  select.innerHTML = `
+    <option value="">
+      Izaberi predmet...
+    </option>
+
+    ${predmetiSvi.map(p => `
+      <option value="${escapeHTML(p.id)}">
+        ${escapeHTML(p.interni_broj)}
+        —
+        ${escapeHTML(p.naziv_predmeta)}
+      </option>
+    `).join("")}
+  `;
+
+  if (
+    predmetiSvi.some(
+      p => String(p.id) === selected
+    )
+  ) {
+    select.value = selected;
+  }
+}
+
+async function loadDocuments() {
+  const id = $("dokument-predmet")?.value;
+  const container = $("dokumenti-lista");
+
+  if (!container) return;
+
+  if (!id) {
+    trenutniDokumenti = [];
+    container.textContent =
+      "Izaberi predmet.";
+    return;
+  }
+
+  container.textContent =
+    "Učitavanje dokumenata...";
+
+  try {
+    const files = await api(
+      `/predmeti/${id}/prilozi`
+    );
+
+    if ($("dokument-predmet")?.value !== id) {
+      return;
+    }
+
+    trenutniDokumenti = files;
+
+    if (!files.length) {
+      container.textContent =
+        "Nema dokumenata.";
+      return;
+    }
+
+    container.innerHTML = files.map(d => `
+      <div class="file-item">
+        <strong>
+          📄 ${escapeHTML(d.naziv)}
+        </strong>
+
+        <p>
+          ${escapeHTML(datumVreme(d.created_at))}
+          · ${formatBytes(d.velicina)}
+        </p>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary btn-small"
+            data-action="download"
+            data-id="${escapeHTML(d.id)}"
+          >
+            Preuzmi
+          </button>
+
+          <button
+            type="button"
+            class="btn btn-danger btn-small"
+            data-action="delete-file"
+            data-id="${escapeHTML(d.id)}"
+          >
+            Obriši
+          </button>
+        </div>
+      </div>
+    `).join("");
   } catch (err) {
-    el.textContent = err.message;
+    container.textContent =
+      "Greška: " + err.message;
   }
 }
 
-async function handleDocumentClick(e) {
-  const btn = e.target.closest(
-    "button[data-action]"
-  );
-
-  if (!btn) return;
-
-  const id = Number(btn.dataset.id);
-
-  if (btn.dataset.action === "download") {
-    await downloadDocument(id);
-  }
-
-  if (btn.dataset.action === "delete") {
-    await deleteDocument(id);
-  }
-}
-
-async function uploadDocumentsFromTab() {
-  const predmetId =
-    $("dokument-predmet")?.value;
-
+async function uploadDocuments() {
+  const id = $("dokument-predmet")?.value;
   const files = Array.from(
     $("dokument-file")?.files || []
   );
 
-  if (!predmetId) {
-    showMessage(
-      "Izaberi predmet.",
-      true
-    );
+  if (!id) {
+    message("Prvo izaberi predmet.", true);
     return;
   }
 
   if (!files.length) {
-    showMessage(
-      "Izaberi dokumente.",
-      true
-    );
+    message("Izaberi dokument.", true);
     return;
   }
 
-  const btn = $("upload-btn");
-
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Slanje...";
-  }
-
-  let success = 0;
-  const errors = [];
-
   try {
+    files.forEach(validateFile);
+
+    let uploaded = 0;
+    let failed = 0;
+
     for (const file of files) {
       try {
-        await uploadSingleDocument(
-          predmetId,
-          file
-        );
-
-        success++;
+        await uploadFile(id, file);
+        uploaded++;
       } catch (err) {
-        errors.push(
-          `${file.name}: ${err.message}`
-        );
+        failed++;
+        console.error(err);
       }
     }
 
@@ -1633,116 +1504,100 @@ async function uploadDocumentsFromTab() {
       $("dokument-file").value = "";
     }
 
-    await loadDocuments();
     await refreshAll();
+    await loadDocuments();
 
-    showMessage(
-      `Dodato dokumenata: ${success}.` +
-      (
-        errors.length
-          ? ` Greške: ${errors.join("; ")}`
-          : ""
-      ),
-      errors.length > 0
+    message(
+      `Dodato dokumenata: ${uploaded}. Neuspešno: ${failed}.`,
+      failed > 0
     );
-
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent =
-        "📤 Sačuvaj dokument";
-    }
+  } catch (err) {
+    message(err.message, true);
   }
 }
 
 async function downloadDocument(id) {
   try {
     const response = await fetch(
-      `/api/prilozi/${id}`,
+      `${API}/prilozi/${id}`,
       {
         headers: {
-          Authorization: `Bearer ${token}`
-        },
-        cache: "no-store"
+          Authorization: "Bearer " + token
+        }
       }
     );
 
     if (response.status === 401) {
-      logout();
-
-      throw new Error(
-        "Sesija je istekla."
-      );
+      logout(false);
+      throw new Error("Sesija je istekla.");
     }
 
     if (!response.ok) {
       throw new Error(
-        "Preuzimanje nije uspelo."
+        "Dokument nije moguće preuzeti."
       );
     }
 
     const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
 
     const file = trenutniDokumenti.find(
-      f => Number(f.id) === Number(id)
+      d => String(d.id) === String(id)
     );
 
-    const name =
-      file?.naziv || `prilog-${id}`;
+    const link = document.createElement("a");
+    link.href = url;
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    link.download = file?.naziv ||
+      `prilog-${id}`;
 
-    a.href = url;
-    a.download = name;
-
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 
     setTimeout(
       () => URL.revokeObjectURL(url),
       60000
     );
-
   } catch (err) {
-    showMessage(err.message, true);
+    message(err.message, true);
   }
 }
 
 async function deleteDocument(id) {
   if (!confirm(
-    "Trajno obrisati dokument?"
+    "Trajno obrisati ovaj dokument?"
   )) {
     return;
   }
 
   try {
-    await api(`/api/prilozi/${id}`, {
-      method: "DELETE"
-    });
-
-    await loadDocuments();
-    await refreshAll();
-
-    showMessage(
-      "Dokument je obrisan."
+    await api(
+      `/prilozi/${id}`,
+      { method: "DELETE" }
     );
 
+    await refreshAll();
+    await loadDocuments();
+
+    message(
+      "Dokument je obrisan. Aktivnost je evidentirana u istoriji."
+    );
   } catch (err) {
-    showMessage(err.message, true);
+    message(err.message, true);
   }
 }
 
-// ==================================================
+// ========================================
 // ROKOVI
-// ==================================================
+// ========================================
 
 function renderCalendar() {
-  const el = $("kalendar-lista");
-  if (!el) return;
+  const container = $("kalendar-lista");
 
-  const list = predmetiSvi
+  if (!container) return;
+
+  const items = predmetiSvi
     .filter(p => p.rok_datum)
     .sort((a, b) =>
       String(a.rok_datum).localeCompare(
@@ -1750,38 +1605,28 @@ function renderCalendar() {
       )
     );
 
-  if (!list.length) {
-    el.textContent =
-      "Nema predmeta sa definisanim rokom.";
+  if (!items.length) {
+    container.innerHTML = `
+      <div class="card">
+        Nema evidentiranih rokova.
+      </div>
+    `;
     return;
   }
 
-  el.innerHTML = list.map(p => {
-    const stanje = stanjeRoka(p);
+  container.innerHTML = items.map(p => {
+    const expired =
+      p.rok_datum < todayISO() &&
+      ![
+        "Završeno / Odobreno",
+        "Arhivirano"
+      ].includes(p.status);
 
     return `
-      <div class="predmet">
-
-        <div style="
-          display:flex;
-          justify-content:space-between;
-          gap:10px;
-          flex-wrap:wrap;
-        ">
-
-          <h3>
-            ${escapeHTML(p.naziv_predmeta)}
-          </h3>
-
-          <span class="badge ${
-            stanje.klasa === "danger"
-              ? "badge-danger"
-              : ""
-          }">
-            ${escapeHTML(stanje.tekst)}
-          </span>
-
-        </div>
+      <div class="card">
+        <h3>
+          ${escapeHTML(p.naziv_predmeta)}
+        </h3>
 
         <p>
           <b>Broj:</b>
@@ -1790,7 +1635,7 @@ function renderCalendar() {
 
         <p>
           <b>Rok:</b>
-          ${datumTekst(p.rok_datum)}
+          ${escapeHTML(datum(p.rok_datum))}
         </p>
 
         <p>
@@ -1798,83 +1643,95 @@ function renderCalendar() {
           ${escapeHTML(p.status)}
         </p>
 
+        ${expired
+          ? '<span class="badge badge-danger">Rok je istekao</span>'
+          : ""}
+
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary btn-small"
+            data-action="dosije"
+            data-id="${escapeHTML(p.id)}"
+          >
+            Otvori dosije
+          </button>
+        </div>
       </div>
     `;
   }).join("");
 }
 
-// ==================================================
+// ========================================
 // ANALITIKA
-// ==================================================
+// ========================================
 
-function renderAnalytics() {
-  const expired = predmetiSvi.filter(
-    p => stanjeRoka(p).klasa === "danger"
-  ).length;
+async function renderAnalytics() {
+  try {
+    if (!token) return;
 
-  const values = {
-    "st-ukupno": predmetiSvi.length,
+    const stats = await api("/analitika");
 
-    "st-uradu": predmetiSvi.filter(
-      p => p.status === "U radu"
-    ).length,
+    const values = {
+      "st-ukupno": stats.ukupno,
+      "st-uradu": stats.u_radu,
+      "st-isteklo": stats.isteklo,
+      "st-zavrseno": stats.zavrseno
+    };
 
-    "st-isteklo": expired,
-
-    "st-zavrseno": predmetiSvi.filter(
-      p => p.status === "Završeno / Odobreno"
-    ).length
-  };
-
-  Object.entries(values).forEach(
-    ([id, value]) => {
+    for (const [id, value] of Object.entries(values)) {
       if ($(id)) {
-        $(id).textContent = value;
+        $(id).textContent =
+          Number(value) || 0;
       }
     }
-  );
+  } catch (err) {
+    console.error(
+      "Analitika:",
+      err.message
+    );
+  }
 }
 
-// ==================================================
-// ADMINISTRACIJA KORISNIKA
-// ==================================================
+// ========================================
+// KORISNICI
+// ========================================
 
 async function loadUsers() {
-  const el = $("users-list");
-  if (!el) return;
-
   if (
     trenutniKorisnik?.username !== "admin"
   ) {
-    el.textContent =
-      "Pristup nije dozvoljen.";
     return;
   }
 
+  const container = $("users-list");
+
+  if (!container) return;
+
   try {
-    const users = await api("/api/users");
+    const users = await api("/users");
 
-    el.innerHTML = users.map(u => `
+    container.innerHTML = users.map(user => `
       <div class="file-item">
-
         <strong>
-          👤 ${escapeHTML(u.username)}
+          👤 ${escapeHTML(user.username)}
         </strong>
 
         <p>
-          ID: ${escapeHTML(u.id)}
+          Kreiran:
+          ${escapeHTML(
+            datumVreme(user.created_at)
+          )}
         </p>
-
       </div>
     `).join("");
-
   } catch (err) {
-    el.textContent = err.message;
+    container.textContent = err.message;
   }
 }
 
-async function createUser(e) {
-  e.preventDefault();
+async function createUser(event) {
+  event.preventDefault();
 
   const username =
     $("new-username")?.value.trim();
@@ -1882,16 +1739,8 @@ async function createUser(e) {
   const password =
     $("new-password")?.value;
 
-  if (!username || !password) {
-    showMessage(
-      "Unesi korisničko ime i lozinku.",
-      true
-    );
-    return;
-  }
-
   try {
-    await api("/api/users", {
+    await api("/users", {
       method: "POST",
       body: JSON.stringify({
         username,
@@ -1903,90 +1752,59 @@ async function createUser(e) {
 
     await loadUsers();
 
-    showMessage(
-      `Korisnik "${username}" je kreiran.`
+    message(
+      "Korisnički nalog je kreiran."
     );
-
   } catch (err) {
-    showMessage(err.message, true);
+    message(err.message, true);
   }
 }
 
-// ==================================================
-// CSV IZVOZ
-// ==================================================
+// ========================================
+// CSV / EXCEL
+// ========================================
 
-function csvCell(value) {
-  let s = String(
-    value == null ? "" : value
-  );
+function csvValue(value) {
+  const text = String(value ?? "");
 
-  if (/^\s*[=+\-@]/.test(s)) {
-    s = "'" + s;
-  }
-
-  return `"${s.replace(/"/g, '""')}"`;
+  return '"' +
+    text.replace(/"/g, '""') +
+    '"';
 }
 
 function exportCSV() {
-  if (!predmetiSvi.length) {
-    showMessage(
-      "Nema predmeta za izvoz.",
-      true
-    );
-    return;
-  }
+  const headers = polja.map(
+    key => naziviPolja[key] || key
+  );
 
-  const fields = [
-    ["interni_broj", "Broj"],
-    ["naziv_predmeta", "Naziv"],
-    ["vrsta_predmeta", "Vrsta"],
-    ["investor", "Stranka"],
-    ["obradjivac", "Obrađivač"],
-    ["potpisnik", "Potpisnik"],
-    ["datum_prijema", "Datum prijema"],
-    ["rok_datum", "Rok"],
-    ["status", "Status"],
-    ["napomena", "Napomena"],
-    ["ceop_broj", "CEOP broj"],
-    ["rop_broj", "ROP broj"],
-    ["opstina", "Opština"],
-    [
-      "katastarska_opstina",
-      "Katastarska opština"
-    ],
-    ["broj_parcele", "Parcela"],
-    ["nadlezni_organ", "Nadležni organ"]
-  ];
+  const rows = filteredPredmeti().map(
+    p => polja.map(
+      key => csvValue(p[key])
+    ).join(";")
+  );
 
-  const rows = [
-    fields.map(
-      f => csvCell(f[1])
-    ).join(";"),
-
-    ...predmetiSvi.map(p =>
-      fields.map(
-        f => csvCell(p[f[0]])
-      ).join(";")
-    )
-  ];
+  const content = [
+    headers.map(csvValue).join(";"),
+    ...rows
+  ].join("\r\n");
 
   const blob = new Blob(
-    ["\uFEFF" + rows.join("\r\n")],
+    ["\uFEFF" + content],
     {
       type: "text/csv;charset=utf-8"
     }
   );
 
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
 
-  a.href = url;
-  a.download = "rokovnik_predmeti.csv";
+  const link = document.createElement("a");
+  link.href = url;
+  link.download =
+    `rokovnik-predmeti-${todayISO()}.csv`;
 
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 
   setTimeout(
     () => URL.revokeObjectURL(url),
@@ -1994,82 +1812,254 @@ function exportCSV() {
   );
 }
 
-// ==================================================
-// E-MAIL
-// ==================================================
+// ========================================
+// EMAIL
+// ========================================
 
 function sendPredmetMail(id) {
   const p = findPredmet(id);
-  if (!p) return;
 
-  const address = prompt(
-    "E-mail primaoca:",
-    ""
-  );
-
-  if (!address) return;
-
-  const text = [
-    "PREGLED PREDMETA",
-    "",
-    `Broj: ${p.interni_broj}`,
-    `Naziv: ${p.naziv_predmeta}`,
-    `Vrsta: ${p.vrsta_predmeta}`,
-    `Stranka: ${p.investor || "/"}`,
-    `Obrađivač: ${p.obradjivac || "/"}`,
-    `Potpisnik: ${p.potpisnik || "/"}`,
-    `Prijem: ${datumTekst(p.datum_prijema)}`,
-    `Rok: ${datumTekst(p.rok_datum)}`,
-    `Status: ${p.status}`,
-    `Napomena: ${p.napomena || "/"}`
-  ].join("\n");
-
-  window.location.href =
-    `mailto:${encodeURIComponent(address)}` +
-    `?subject=${encodeURIComponent(
-      `Predmet ${p.interni_broj}: ` +
-      p.naziv_predmeta
-    )}` +
-    `&body=${encodeURIComponent(text)}`;
-}
-
-function sendSummaryMail() {
-  if (!predmetiSvi.length) {
-    showMessage(
-      "Nema predmeta.",
-      true
-    );
+  if (!p) {
+    message("Predmet nije pronađen.", true);
     return;
   }
 
-  const address = prompt(
-    "E-mail primaoca:",
-    ""
-  );
+  const subject =
+    `Predmet ${p.interni_broj} - ${p.naziv_predmeta}`;
 
-  if (!address) return;
-
-  const text = [
-    "ZBIRNI IZVEŠTAJ ROKOVNIKA",
-    "",
-    `Datum: ${datumTekst(danas())}`,
-    `Ukupno: ${predmetiSvi.length}`,
-    "",
-    ...predmetiSvi.map((p, i) =>
-      `${i + 1}. ` +
-      `${p.interni_broj} — ` +
-      `${p.naziv_predmeta}\n` +
-      `Status: ${p.status}\n` +
-      `Rok: ${datumTekst(p.rok_datum)}\n`
-    )
-  ].join("\n");
+  const body = polja.map(key =>
+    `${naziviPolja[key]}: ${prikazVrednosti(p[key], key)}`
+  ).join("\n");
 
   window.location.href =
-    `mailto:${encodeURIComponent(address)}` +
-    "?subject=" +
-    encodeURIComponent(
-      "Zbirni izveštaj Rokovnika"
-    ) +
+    "mailto:?subject=" +
+    encodeURIComponent(subject) +
     "&body=" +
-    encodeURIComponent(text);
+    encodeURIComponent(body);
+}
+
+function sendSummaryMail() {
+  const items = filteredPredmeti();
+
+  const subject =
+    "Rokovnik Pro - pregled predmeta";
+
+  const body = items.map(p =>
+    [
+      p.interni_broj,
+      p.naziv_predmeta,
+      "Status: " + p.status,
+      "Rok: " + datum(p.rok_datum)
+    ].join("\n")
+  ).join("\n\n");
+
+  window.location.href =
+    "mailto:?subject=" +
+    encodeURIComponent(subject) +
+    "&body=" +
+    encodeURIComponent(body);
+}
+
+// ========================================
+// DOGADJAJI
+// ========================================
+
+async function handleAction(event) {
+  const button = event.target.closest(
+    "[data-action]"
+  );
+
+  if (!button) return;
+
+  const action = button.dataset.action;
+  const id = button.dataset.id;
+
+  switch (action) {
+    case "dosije":
+      await openDosije(id);
+      break;
+
+    case "edit":
+      editPredmet(id);
+      break;
+
+    case "delete":
+      await deletePredmet(id);
+      break;
+
+    case "download":
+      await downloadDocument(id);
+      break;
+
+    case "delete-file":
+      await deleteDocument(id);
+      break;
+
+    case "documents":
+      switchTab("tab-dokumenti");
+
+      if ($("dokument-predmet")) {
+        $("dokument-predmet").value = id;
+      }
+
+      await loadDocuments();
+      break;
+
+    case "mail":
+      sendPredmetMail(id);
+      break;
+
+    case "print":
+      window.print();
+      break;
+  }
+}
+
+function initEvents() {
+  $("login-form")?.addEventListener(
+    "submit",
+    login
+  );
+
+  $("logout-btn")?.addEventListener(
+    "click",
+    () => logout()
+  );
+
+  $("predmet-form")?.addEventListener(
+    "submit",
+    savePredmet
+  );
+
+  $("cancel-btn")?.addEventListener(
+    "click",
+    resetForm
+  );
+
+  $("vrsta_predmeta")?.addEventListener(
+    "change",
+    updateCeop
+  );
+
+  $("search")?.addEventListener(
+    "input",
+    renderPredmeti
+  );
+
+  $("filter-vrsta")?.addEventListener(
+    "change",
+    renderPredmeti
+  );
+
+  $("filter-status")?.addEventListener(
+    "change",
+    renderPredmeti
+  );
+
+  $("refresh-btn")?.addEventListener(
+    "click",
+    refreshAll
+  );
+
+  $("excel-btn")?.addEventListener(
+    "click",
+    exportCSV
+  );
+
+  $("mail-btn")?.addEventListener(
+    "click",
+    sendSummaryMail
+  );
+
+  $("dokument-predmet")?.addEventListener(
+    "change",
+    loadDocuments
+  );
+
+  $("upload-btn")?.addEventListener(
+    "click",
+    uploadDocuments
+  );
+
+  $("documents-refresh-btn")?.addEventListener(
+    "click",
+    loadDocuments
+  );
+
+  $("new-user-form")?.addEventListener(
+    "submit",
+    createUser
+  );
+
+  $("dosije-nazad")?.addEventListener(
+    "click",
+    closeDosije
+  );
+
+  $("files-new")?.addEventListener(
+    "change",
+    () => {
+      const count =
+        $("files-new")?.files.length || 0;
+
+      if ($("files-count")) {
+        $("files-count").textContent =
+          count
+            ? `Izabrano dokumenata: ${count}`
+            : "Nema izabranih dokumenata.";
+      }
+    }
+  );
+
+  document.querySelectorAll(
+    ".tab-btn"
+  ).forEach(button => {
+    button.addEventListener(
+      "click",
+      () => switchTab(button.dataset.tab)
+    );
+  });
+
+  document.addEventListener(
+    "click",
+    handleAction
+  );
+}
+
+// ========================================
+// POKRETANJE APLIKACIJE
+// ========================================
+
+async function initApp() {
+  injectHistoryStyles();
+  initEvents();
+  resetForm();
+
+  if (!token) {
+    logout();
+    return;
+  }
+
+  try {
+    const result = await api("/me");
+
+    showApp(result.user);
+    await refreshAll();
+  } catch (err) {
+    console.error(
+      "Pokretanje aplikacije:",
+      err.message
+    );
+
+    logout(false);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    initApp
+  );
+} else {
+  initApp();
 }
